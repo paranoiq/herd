@@ -1,0 +1,6 @@
+/bin
+/build
+/log
+/temp
+/vendor
+composer.lock
