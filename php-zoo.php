@@ -9,7 +9,6 @@ use Dogma\Io\Io;
 use Tracy\Debugger;
 
 if (file_exists(__DIR__ . '/vendor/autoload.php')) {
-    // run separately
     require_once __DIR__ . '/vendor/autoload.php';
 
     $logDir = __DIR__ . '/log';
@@ -71,12 +70,12 @@ if ($config->noColors) {
 }
 
 if (!$config->noLogo) {
-    $console->writeLn(C::lgreen("PHP-Zoo by @paranoiq") . ' - PHP multi-verse installer');
+    $console->writeLn(C::lgreen("PHP-Zoo by @paranoiq") . ' - PHP multi-verse manager');
     $console->ln();
 }
 
 if ($config->help === true || (!$config->hasValues() && (!$config->config))) {
-    $console->writeLn('Installer for downloading, updating and configuring many PHP versions at once (Windows only).')->ln();
+    $console->writeLn('Tool for downloading, updating and configuring many PHP versions at once (Windows only).')->ln();
 
     $console->writeLn('Usage: ' . C::lyellow('php-zoo --action "versions" [options]'))->ln();
 

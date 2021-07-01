@@ -28,7 +28,7 @@ class Version implements Comparable, Equalable
 
     public static function parseUrl(string $url): self
     {
-        $match = Str::match($url, '~php-([0-9]+)(?:\\.([0-9]+))?(?:\\.([0-9]+(?:RC[0-9]+)?))?-?(nts)?.*(x64|x86|Win32)~i');
+        $match = Str::match($url, '~php-([0-9]+)(?:\\.([0-9]+))?(?:\\.([0-9]+(?:(?:alpha|beta|RC)[0-9]+)?))?-?(nts)?.*(x64|x86|Win32)~i');
         [, $major, $minor, $patch, $nts, $bits] = $match;
 
         return new self(
@@ -42,7 +42,7 @@ class Version implements Comparable, Equalable
 
     public static function parseDir(string $dir): self
     {
-        $match = Str::match($dir, '~([0-9]+)(?:\\.([0-9]+))?(?:\\.([0-9]+(?:RC[0-9]+)?))?-?(ts)?-?(32)?~');
+        $match = Str::match($dir, '~([0-9]+)(?:\\.([0-9]+))?(?:\\.([0-9]+(?:(?:alpha|beta|RC)[0-9]+)?))?-?(ts)?-?(32)?~');
         if (!$match) {
             throw new ShouldNotHappenException('Wrong directory');
         }
@@ -65,7 +65,7 @@ class Version implements Comparable, Equalable
         }
         $expression = (string) $expression;
 
-        $match = Str::match($expression, '~([0-9]+?|[*^_])(?:\\.?([0-9]+?|[*^_]))?(?:\\.?([0-9]+?(?:RC[0-9]+)?|[*^_]))?-?(nts|ts|\\*)?-?(32|64|\\*)?$~');
+        $match = Str::match($expression, '~([0-9]+?|[*^_])(?:\\.?([0-9]+?|[*^_]))?(?:\\.?([0-9]+?(?:(?:alpha|beta|RC)[0-9]+)?|[*^_]))?-?(nts|ts|\\*)?-?(32|64|\\*)?$~');
         if (!$match) {
             throw new RuntimeException('Invalid version expression.');
         }
@@ -245,7 +245,13 @@ class Version implements Comparable, Equalable
         return true;
     }
 
-    private static function matchVer(int|string|bool|null $a, int|string|bool|null $b, ?int $latest): bool
+    /**
+     * @param int|string|bool|null $a
+     * @param int|string|bool|null $b
+     * @param int|string|null $latest
+     * @return bool
+     */
+    private static function matchVer(int|string|bool|null $a, int|string|bool|null $b, $latest): bool
     {
         if ($a === null || $b === null || $a === $b) {
             return true;
