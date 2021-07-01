@@ -247,7 +247,7 @@ class Version implements Comparable, Equalable
         return true;
     }
 
-    private static function matchVer(int|string|bool|null $a, int|string|bool|null $b, int|string|null $latest): bool
+    private static function matchVersion(int|string|bool|null $a, int|string|bool|null $b, ?int $latest): bool
     {
         if ($a === null || $b === null || $a === $b) {
             return true;

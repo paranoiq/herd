@@ -73,7 +73,8 @@ trait AppLoaders
         $museumWin32Url = 'https://museum.php.net/win32/';
         $museumPhp5Url = 'https://museum.php.net/php5/';
 
-        $downloadsLinkRe = '~/downloads/(?:releases/|qa/)(?:archives/)?php-[0-9]+\\.[0-9]+\\.[0-9]+(?:RC[0-9]+)?(?:-nts)?-Win32[^.]+\\.zip~i';
+        // https://windows.php.net/downloads/qa/php-8.1.0alpha1-nts-Win32-vs16-x64.zip
+        $downloadsLinkRe = '~/downloads/(?:releases/|qa/)(?:archives/)?php-[0-9]+\\.[0-9]+\\.[0-9]+(?:(?:alpha|beta|RC)[0-9]+)?(?:-nts)?-Win32[^.]+\\.zip~i';
         $museumLinkRe = '~php-[0-9]+\\.[0-9]+\\.[0-9]+(RC[0-9])?(-nts)?-Win32\\.zip~i';
 
         $urls = [];
