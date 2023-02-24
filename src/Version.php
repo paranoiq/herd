@@ -10,6 +10,7 @@ use Dogma\StrictBehaviorMixin;
 use RuntimeException;
 use function array_keys;
 use function array_pad;
+use function end;
 use function is_int;
 use function is_numeric;
 use function is_string;
@@ -19,11 +20,12 @@ class Version implements Comparable, Equalable
     use StrictBehaviorMixin;
 
     public function __construct(
-        public int|bool|null $major,
-        public int|bool|null $minor,
-        public int|string|bool|null $patch,
-        public ?bool $safe,
-        public ?int $bits
+        public int|bool|null $major, // 8
+        public int|bool|null $minor, // 1
+        public int|string|bool|null $patch, // 0|alpha1|beta2|rc3...
+        public ?bool $safe, // ts|nts
+        public ?int $bits, // 32|64
+        public ?string $build = null // vc15|vs16
     ) {}
 
     public static function parseUrl(string $url): self
@@ -65,7 +67,7 @@ class Version implements Comparable, Equalable
         }
         $expression = (string) $expression;
 
-        $match = Str::match($expression, '~([0-9]+?|[*^_])(?:\\.?([0-9]+?|[*^_]))?(?:\\.?([0-9]+?(?:(?:alpha|beta|RC)[0-9]+)?|[*^_]))?-?(nts|ts|\\*)?-?(32|64|\\*)?$~');
+        $match = Str::match($expression, '~([0-9]+?|[*^_])(?:\\.?([0-9]+?|[*^_]))?(?:\\.?([0-9]+?(?:(?:alpha|beta|rc)[0-9]+)?|[*^_]))?-?(nts|ts|\\*)?-?(32|64|\\*)?$~i');
         if (!$match) {
             throw new RuntimeException('Invalid version expression.');
         }
@@ -200,12 +202,10 @@ class Version implements Comparable, Equalable
     }
 
     /**
-     * @param Version $that
      * @param int[][] $families
-     * @param Version[][][] $remote
-     * @return bool
+     * @param Version[][] $available
      */
-    public function match(self $that, array $families = [], array $remote = []): bool
+    public function match(self $that, array $families = [], array $available = []): bool
     {
         if ($this->safe !== null && $that->safe !== null && $this->safe !== $that->safe) {
             return false;
@@ -231,12 +231,14 @@ class Version implements Comparable, Equalable
 
         $patch = is_int($this->patch) ? $this->patch : $that->patch;
         $other = is_int($this->patch) ? $that->patch : $this->patch;
-        $family = "$major.$minor.*-ts-32"; // -ts-32 was available in all versions
-        if (isset($remote[$family])) {
-            $versions = $remote[$family];
-            $last = end($versions)->patch;
-        } else {
-            $last = null;
+        // search for last patch number in available versions
+        $last = null;
+        $familyKeys = ["$major.$minor.*", "$major.$minor.*-32", "$major.$minor.*-ts", "$major.$minor.*-ts-32"];
+        foreach ($familyKeys as $key) {
+            if (isset($available[$key])) {
+                $versions = $available[$key];
+                $last = end($versions)->patch;
+            }
         }
         if (!self::matchVer($patch, $other, $last)) {
             return false;
@@ -245,13 +247,7 @@ class Version implements Comparable, Equalable
         return true;
     }
 
-    /**
-     * @param int|string|bool|null $a
-     * @param int|string|bool|null $b
-     * @param int|string|null $latest
-     * @return bool
-     */
-    private static function matchVer(int|string|bool|null $a, int|string|bool|null $b, $latest): bool
+    private static function matchVer(int|string|bool|null $a, int|string|bool|null $b, int|string|null $latest): bool
     {
         if ($a === null || $b === null || $a === $b) {
             return true;

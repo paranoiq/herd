@@ -10,6 +10,12 @@ class Extensions
     use StaticClassMixin;
 
     public const CORE = [
+        '8.1' => [
+            // todo: update. this is 8.0 copy
+            'bcmath', 'calendar', 'core', 'ctype', 'date', 'dom', 'filter', 'hash', 'iconv', 'json',
+            'libxml', 'mysqlnd', 'pcre', 'pdo', 'phar', 'readline', 'reflection', 'session', 'simplexml',
+            'spl', 'standard', 'tokenizer', 'xml', 'xmlreader', 'xmlwriter', 'zip', 'zlib',
+        ],
         '8.0' => [
             'bcmath', 'calendar', 'core', 'ctype', 'date', 'dom', 'filter', 'hash', 'iconv', 'json',
             'libxml', 'mysqlnd', 'pcre', 'pdo', 'phar', 'readline', 'reflection', 'session', 'simplexml',
@@ -117,6 +123,13 @@ class Extensions
     ];
 
     public const BUNDLED = [
+        '8.1' => [ // todo: update. this is 8.0 copy
+            'bz2', 'com_dotnet', 'curl', 'dba', 'enchant', 'exif', 'ffi', 'fileinfo', 'ftp', 'gd', 'gettext', 'gmp',
+            'imap', 'intl', 'ldap', 'mbstring', 'mysqli', 'oci8_12c', 'oci8_19', 'odbc', 'opcache', 'openssl',
+            'pdo_firebird', 'pdo_mysql', 'pdo_oci', 'pdo_odbc', 'pdo_pgsql', 'pdo_sqlite', 'pgsql', 'phpdbg_webhelper',
+            'shmop', 'snmp', 'soap', 'sockets', 'sodium', 'sqlite3', 'sysvshm', 'tidy', 'xsl', 'zend_test',
+            // -pcov -xmlrpc +oci8_19
+        ],
         '8.0' => [
             'bz2', 'com_dotnet', 'curl', 'dba', 'enchant', 'exif', 'ffi', 'fileinfo', 'ftp', 'gd', 'gettext', 'gmp',
             'imap', 'intl', 'ldap', 'mbstring', 'mysqli', 'oci8_12c', 'oci8_19', 'odbc', 'opcache', 'openssl',

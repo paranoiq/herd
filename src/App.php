@@ -9,6 +9,7 @@ use Dogma\Arr;
 use Dogma\Check;
 use Dogma\ComparisonResult;
 use Dogma\Io\FileInfo;
+use Dogma\Io\FilesystemException;
 use Dogma\Io\Io;
 use Dogma\ShouldNotHappenException;
 use Dogma\Str;
@@ -33,7 +34,7 @@ use function iterator_to_array;
 use function ksort;
 use function max;
 use function number_format;
-use function preg_match;
+use function rd;
 use function str_contains;
 use function str_pad;
 use function str_replace;
@@ -49,12 +50,14 @@ class App
 
     private const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Safari/537.36';
 
+    private const CACHE_TIME = '1 month';
+
     private const FAMILIES = [
         3 => [0],
         4 => [0, 1, 2, 3, 4],
         5 => [1, 2, 3, 4, 5, 6],
         7 => [0, 1, 2, 3, 4],
-        8 => [0, 1],
+        8 => [0, 1, 2, 3],
     ];
 
     private const IGNORED_EXTENSION_FILE_TYPES = '/\\.(pdb|md|markdown|php|rst|txt|json)$/';
@@ -112,8 +115,8 @@ class App
             $this->loadPeclExtList();
             $this->loadCachedExtVersions();
             [$ext, $f] = explode(':', $config->extension . ':');
-            $ext = $config->extension === true ? true : $ext;
-            $extFilter = Version::parseExp($f ?: '**^');
+            //$ext = $config->extension === true ? true : $ext;
+            $extFilter = Version::parseExp($f ?: ($config->uninstall ? '**_' : '**^'));
 
             if (!$config->local && !$config->all && !$config->new
                 && !$config->install && !$config->uninstall
@@ -129,7 +132,7 @@ class App
             } elseif ($config->off) {
                 $this->extensionOff($ext, self::filter($config->off));
             } elseif ($config->uninstall) {
-                $this->uninstallExtension($ext, self::filter($config->uninstall));
+                $this->uninstallExtension($ext, $extFilter, self::filter($config->uninstall));
             } else {
                 $this->loadExtRemote($ext);
                 if ($config->all) {
@@ -330,7 +333,7 @@ class App
                 $this->console->writeLn('  ', C::white($family), ':');
                 $ver = [];
                 /** @var Version $extVersion */
-                foreach ($versions as $url => $extVersion) {
+                foreach ($versions as $extVersion) {
                     $ver[] = $extVersion->format();
                 }
                 $this->console->writeLn('    ' . implode(', ', $ver));
@@ -449,6 +452,9 @@ class App
 
     // install/uninstall -----------------------------------------------------------------------------------------------
 
+    /**
+     * @param Version[] $filters
+     */
     private function install(array $filters, bool $autoSelect): void
     {
         foreach ($filters as $filter) {
@@ -514,6 +520,9 @@ class App
         $this->configureVersion($version);
     }
 
+    /**
+     * @param Version[] $filters
+     */
     private function uninstall(array $filters): void
     {
         foreach ($filters as $filter) {
@@ -521,7 +530,7 @@ class App
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
-                    if (!$filter->match($version, self::FAMILIES, $this->remote)) {
+                    if (!$filter->match($version, self::FAMILIES, $this->local)) {
                         continue;
                     }
                     $this->console->writeLn('  Removing ' . C::white($version->format()));
@@ -534,6 +543,8 @@ class App
                         // todo: unselect
                         time();
                     }
+
+                    $this->removeBinFiles($version, 3);
                 }
             }
         }
@@ -554,6 +565,9 @@ class App
 
                     $extension = Extensions::dllName($version, $extension);
 
+                    if (!isset($this->remoteExtensions[$extension])) {
+                        continue;
+                    }
                     if (Extensions::isCore($extension, $version)) {
                         $this->console->writeLn("    skipping (core)");
                         continue;
@@ -874,13 +888,27 @@ class App
         // cgi
         if ($version->major >= 5) {
             Io::write($binPath . '-cgi', "#!/usr/bin/env sh\n"
+                . "export PHP_FCGI_MAX_REQUESTS=0\n"
+                . "export PHP_FCGI_CHILDREN=16\n"
                 . "\"{$this->getVersionCgiBinaryPath($version)}\" \"$@\"\n"
             );
             Io::write($binPath . "-cgi.bat", "@echo OFF\n"
                 . "setlocal DISABLEDELAYEDEXPANSION\n"
+                . "set PHP_FCGI_MAX_REQUESTS=0\n"
+                . "set PHP_FCGI_CHILDREN=16\n"
                 . "{$this->getVersionCgiBinaryPath($version)} %*\n"
             );
         }
+    }
+
+    private function removeBinFiles(Version $version, int $level): void
+    {
+        $binPath = $this->getBinPath($version, $level);
+
+        Io::delete($binPath);
+        Io::delete($binPath . '.bat');
+        Io::delete($binPath . '-cgi');
+        Io::delete($binPath . '-cgi.bat');
     }
 
     // switching versions ----------------------------------------------------------------------------------------------
@@ -1017,7 +1045,7 @@ class App
         return isset($this->local[$version->family()][$version->format()]);
     }
 
-    private function getLatestInstalled(Version $family): ?int
+    private function getLatestInstalled(Version $family): int|string|null
     {
         if (!isset($this->local[$family->family()])) {
             return null;
@@ -1047,7 +1075,6 @@ class App
     }
 
     /**
-     * @param Version $version
      * @return Version[]
      */
     private function probeExtensionVersions(Version $version): array
@@ -1089,8 +1116,6 @@ class App
     }
 
     /**
-     * @param string|bool|float $expr
-     * @param string|null $default
      * @return Version[]
      */
     private static function filter(string|bool|float $expr, ?string $default = null): array
@@ -1194,7 +1219,7 @@ class App
 
         // archives
         $cache = new FileInfo($this->baseDir . '/cache/php-archives.html');
-        if ($cache->exists() && $cache->getModifiedTime()->isAfter(new DateTime('-1 week'))) {
+        if ($cache->exists() && $cache->getModifiedTime()->isAfter(new DateTime('-' . self::CACHE_TIME))) {
             $html = $cache->read();
         } else {
             $this->console->writeLn('Refreshing archives');
@@ -1253,7 +1278,7 @@ class App
         $extListRe = '~"/package/([a-zA-Z0-9_]+)">[a-zA-Z0-9_]+</a></td>\\s*<td>([0-9,]+)</td>~';
 
         $cache = new FileInfo($this->baseDir . '/cache/php-pecl-extensions.html');
-        if ($cache->exists() && $cache->getModifiedTime()->isAfter(new DateTime('-1 week'))) {
+        if ($cache->exists() && $cache->getModifiedTime()->isAfter(new DateTime('-' . self::CACHE_TIME))) {
             $html = $cache->read();
         } else {
             $this->console->writeLn('Refreshing extension list');
@@ -1273,14 +1298,19 @@ class App
     private function loadExtRemote(string $name): void
     {
         $cache = new FileInfo($this->baseDir . '/cache/pecl-' . $name . '.json');
-        if ($cache->exists() && $cache->getModifiedTime()->isAfter(new DateTime('-1 week'))) {
+        if ($cache->exists() && $cache->getModifiedTime()->isAfter(new DateTime('-' . self::CACHE_TIME))) {
             $json = $cache->read();
             $versions = Json::decode($json, Json::FORCE_ARRAY);
         } else {
             $this->console->writeLn("Refreshing $name extension versions");
 
             $url = "https://pecl.php.net/package/$name";
-            $html = Io::read($url, context: $this->createContext());
+            try {
+                $html = Io::read($url, context: $this->createContext());
+            } catch (FilesystemException $e) {
+                $this->console->writeLn(C::red("Extension $name not found."));
+                return;
+            }
 
             $versions = [];
             $verRe = '~/package/[a-zA-Z0-9_]+/([0-9]+\\.[0-9]+\\.[0-9]+)/windows~';
@@ -1288,7 +1318,7 @@ class App
                 $url = "https://pecl.php.net/package/$name/$extVer/windows";
                 $html = Io::read($url, context: $this->createContext());
 
-                $versionRe = "~https://windows.php.net/downloads/pecl/releases/$name/$extVer/php_imagick-$extVer-([0-9]+\\.[0-9]+(?:-nts|-ts)?(?:-vc[0-9]+)?-(?:x64|x86))\\.zip~";
+                $versionRe = "~https://windows.php.net/downloads/pecl/releases/$name/$extVer/php_$name-$extVer-([0-9]+\\.[0-9]+(?:-nts|-ts)?(?:-v[cs][0-9]+)?-(?:x64|x86))\\.zip~";
                 foreach (Str::matchAll($html, $versionRe, PREG_SET_ORDER) as [$url, $ver]) {
                     $version = Version::parseUrl('php-'. $ver);
                     $versions[$version->family()][$url] = $extVer;
@@ -1301,7 +1331,7 @@ class App
                 $versions[$i] = $v;
             }
 
-            $cache->write(Json::encode($versions));
+            $cache->write(Json::encode($versions, Json::PRETTY));
         }
 
         foreach ($versions as $i => $v) {

@@ -5,8 +5,19 @@ namespace Zoo;
 use Dogma\Application\Colors as C;
 use Dogma\Application\Configurator;
 use Dogma\Application\Console;
+use Dogma\Debug\Dumper;
 use Dogma\Io\Io;
 use Tracy\Debugger;
+use function class_exists;
+use function get_class;
+
+if (class_exists(Dumper::class)) {
+    Dumper::$objectFormatters[Version::class] = static function (Version $version): string {
+        return Dumper::name(get_class($version)) . Dumper::bracket('(')
+            . Dumper::value($version->format())
+            . Dumper::bracket(')') . ' ' . Dumper::info('// #' . Dumper::objectHash($version));
+    };
+}
 
 if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require_once __DIR__ . '/vendor/autoload.php';
