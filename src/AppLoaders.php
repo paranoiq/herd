@@ -11,6 +11,7 @@ use Dogma\Time\DateTime;
 use Nette\Utils\Json;
 use StreamContext;
 use Tracy\Debugger;
+use Tracy\Dumper;
 use ZipArchive;
 use function exec;
 use function ksort;
@@ -304,12 +305,12 @@ trait AppLoaders
                 $html = Io::read($url, context: $this->createContext());
 
                 $versions = [];
-                $verRe = '~/package/[a-zA-Z0-9_]+/([0-9]+\\.[0-9]+\\.[0-9]+)/windows~';
+                $verRe = '~/package/\w+/(\d+\\.\d+\\.\d+)/windows~';
                 foreach (Str::matchAll($html, $verRe)[1] as $extVer) {
                     $url = "https://pecl.php.net/package/$name/$extVer/windows";
                     $html = Io::read($url, context: $this->createContext());
 
-                    $versionRe = "~https://windows.php.net/downloads/pecl/releases/$name/$extVer/php_imagick-$extVer-([0-9]+\\.[0-9]+(?:-nts|-ts)?(?:-vc[0-9]+)?-(?:x64|x86))\\.zip~";
+                    $versionRe = "~https://windows.php.net/downloads/pecl/releases/$name/$extVer/php_$name-$extVer-(\d+\\.\d+(?:-nts|-ts)?(?:-v[cs]\d+)?-(?:x64|x86))\\.zip~";
                     foreach (Str::matchAll($html, $versionRe, PREG_SET_ORDER) as [$url, $ver]) {
                         $version = Version::parseUrl('php-' . $ver);
                         $versions[$version->family()][$url] = $extVer;
@@ -322,7 +323,7 @@ trait AppLoaders
                     $versions[$i] = $v;
                 }
 
-                $cache->write(Json::encode($versions));
+                $cache->write(Json::encode($versions, Json::PRETTY));
             }
 
             foreach ($versions as $i => $v) {

@@ -180,6 +180,10 @@ class App
         Io::createDirectory($this->baseDir . '/ext', Io::IGNORE);
         Io::createDirectory($this->baseDir . '/versions', Io::IGNORE);
 
+        $self = dirname(__DIR__) . '/php-zoo.php';
+        Io::write($this->baseDir . '/bin/zoo', "#!/usr/bin/env sh\nphp80 \"$self\" \"$@\"");
+        Io::write($this->baseDir . '/bin/zoo.bat', "@echo OFF\nsetlocal DISABLEDELAYEDEXPANSION\nphp80 \"$self\" %*");
+
         if ($config->clearCache) {
             $this->console->writeLn('Cleaning cache');
             Io::cleanDirectory($this->baseDir . '/cache');
@@ -585,6 +589,7 @@ class App
                         if (!$for->match($version)) {
                             continue;
                         }
+
                         /** @var Version $extensionVersion */
                         foreach ($extVersions as $url => $extensionVersion) {
                             $available[] = $extensionVersion->format();

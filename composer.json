@@ -82,5 +82,31 @@
             "php73 vendor/php-parallel-lint/php-parallel-lint/parallel-lint src tests",
             "php72 vendor/php-parallel-lint/php-parallel-lint/parallel-lint src tests"
         ]
+    },
+    "scripts-descriptions": {
+        "c": "\u001B[0;33m⭐Run all checks (shortcut)\u001B[0m",
+        "t": "\u001B[0;33m⭐Run tests (shortcut)\u001B[0m",
+        "tc": "\u001B[0;33m⭐Run tests with code coverage (shortcut)\u001B[0m",
+        "da": "\u001B[0;33m⭐Dump autoloader (shortcut)\u001B[0m",
+        "cs": "\u001B[0;33m⭐Run CS check\u001B[0m",
+        "build": "\u001B[0;33m⭐Run build script\u001B[0m",
+        "check": "\u001B[0;33m⭐Run all checks (tests, phpstan, phpcs, phplint, spell-check)\u001B[0m",
+        "check-all": "\u001B[0;33m⭐Run all checks on all supported PHP versions (7.2 to 8.0)\u001B[0m",
+        "test": "\u001B[0;33m⭐Run tests\u001B[0m",
+        "test-all": "\u001B[0;33m⭐Run tests on all supported PHP versions (7.2 to 8.0)\u001B[0m",
+        "test-coverage": "\u001B[0;33m⭐Run tests with code coverage\u001B[0m",
+        "stan": "\u001B[0;33m⭐Run PHPStan check\u001B[0m",
+        "stan-all": "\u001B[0;33m⭐Run PHPStan check on PHP 7.4 and 8.0\u001B[0m",
+        "cs-src": "\u001B[0;33m⭐Run CS check on /src\u001B[0m",
+        "cs-tests": "\u001B[0;33m⭐Run CS check on /tests\u001B[0m",
+        "cs-fix": "\u001B[0;33m⭐Run CS check with auto-fixing on /src and /tests\u001B[0m",
+        "spell": "\u001B[0;33m⭐Run spell-checker\u001B[0m",
+        "lint": "\u001B[0;33m⭐Run PHPLint\u001B[0m",
+        "lint-all": "\u001B[0;33m⭐Run PHPLint on all supported PHP versions (7.2 to 8.0)\u001B[0m"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": false
+        }
     }
 }

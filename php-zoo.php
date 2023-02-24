@@ -10,10 +10,11 @@ use Dogma\Io\Io;
 use Tracy\Debugger;
 use function class_exists;
 use function get_class;
+use function phpversion;
 
 if (class_exists(Dumper::class)) {
     Dumper::$objectFormatters[Version::class] = static function (Version $version): string {
-        return Dumper::name(get_class($version)) . Dumper::bracket('(')
+        return Dumper::class(get_class($version)) . Dumper::bracket('(')
             . Dumper::value($version->format())
             . Dumper::bracket(')') . ' ' . Dumper::info('// #' . Dumper::objectHash($version));
     };
@@ -81,7 +82,13 @@ if ($config->noColors) {
 }
 
 if (!$config->noLogo) {
-    $console->writeLn(C::lgreen("PHP-Zoo by @paranoiq") . ' - PHP multi-verse manager');
+    $console->writeLn("  ┌────────┬──┐      ");
+    $console->writeLn("  │     ┌┘ │ ▋│┌─┐   " . C::lgreen("HERD by @paranoiq"));
+    $console->writeLn(" ┌┤     │  │  ││┌┘   " . "PHP installer/manager");
+    $console->writeLn(" ││     └──┘│ └┘│    ");
+    $console->writeLn(" ┘│         └┬──┘    " . "PHP " . phpversion());
+    $console->writeLn("  │ ┌─┬──┐ ┌ │       ");
+    $console->writeLn("▔▔└─┴─┘▔▔└─┴─┘▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔");
     $console->ln();
 }
 
