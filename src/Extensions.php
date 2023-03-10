@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace Zoo;
+namespace Herd;
 
 use Dogma\StaticClassMixin;
 use function in_array;
@@ -10,8 +10,13 @@ class Extensions
     use StaticClassMixin;
 
     public const CORE = [
+        '8.2' => [
+            'bcmath', 'calendar', 'core', 'ctype', 'date', 'dom', 'filter', 'hash', 'iconv', 'json',
+            'libxml', 'mysqlnd', 'pcre', 'pdo', 'phar', 'readline', 'reflection', 'session', 'simplexml',
+            'spl', 'standard', 'tokenizer', 'xml', 'xmlreader', 'xmlwriter', 'zlib',
+            // -zip
+        ],
         '8.1' => [
-            // todo: update. this is 8.0 copy
             'bcmath', 'calendar', 'core', 'ctype', 'date', 'dom', 'filter', 'hash', 'iconv', 'json',
             'libxml', 'mysqlnd', 'pcre', 'pdo', 'phar', 'readline', 'reflection', 'session', 'simplexml',
             'spl', 'standard', 'tokenizer', 'xml', 'xmlreader', 'xmlwriter', 'zip', 'zlib',
@@ -123,12 +128,19 @@ class Extensions
     ];
 
     public const BUNDLED = [
-        '8.1' => [ // todo: update. this is 8.0 copy
+        '8.2' => [
+            'bz2', 'com_dotnet', 'curl', 'dba', 'dl_test', 'enchant', 'exif', 'ffi', 'fileinfo', 'ftp', 'gd', 'gettext',
+            'gmp', 'imap', 'intl', 'ldap', 'mbstring', 'mysqli', 'oci8_19', 'odbc', 'opcache', 'openssl',
+            'pdo_firebird', 'pdo_mysql', 'pdo_oci', 'pdo_odbc', 'pdo_pgsql', 'pdo_sqlite', 'pgsql',
+            'shmop', 'snmp', 'soap', 'sockets', 'sodium', 'sqlite3', 'sysvshm', 'tidy', 'xsl', 'zend_test', 'zip'
+            // +zip
+        ],
+        '8.1' => [
             'bz2', 'com_dotnet', 'curl', 'dba', 'enchant', 'exif', 'ffi', 'fileinfo', 'ftp', 'gd', 'gettext', 'gmp',
-            'imap', 'intl', 'ldap', 'mbstring', 'mysqli', 'oci8_12c', 'oci8_19', 'odbc', 'opcache', 'openssl',
-            'pdo_firebird', 'pdo_mysql', 'pdo_oci', 'pdo_odbc', 'pdo_pgsql', 'pdo_sqlite', 'pgsql', 'phpdbg_webhelper',
+            'imap', 'intl', 'ldap', 'mbstring', 'mysqli', 'oci8_19', 'odbc', 'opcache', 'openssl',
+            'pdo_firebird', 'pdo_mysql', 'pdo_oci', 'pdo_odbc', 'pdo_pgsql', 'pdo_sqlite', 'pgsql',
             'shmop', 'snmp', 'soap', 'sockets', 'sodium', 'sqlite3', 'sysvshm', 'tidy', 'xsl', 'zend_test',
-            // -pcov -xmlrpc +oci8_19
+            // -oci8_12c -phpdbg_webhelper
         ],
         '8.0' => [
             'bz2', 'com_dotnet', 'curl', 'dba', 'enchant', 'exif', 'ffi', 'fileinfo', 'ftp', 'gd', 'gettext', 'gmp',
@@ -269,18 +281,45 @@ class Extensions
         ],
     ];
 
+    public const ZEND_EXTENSIONS = ['opcache', 'blackfire', 'phpdbg', 'xdebug'];
+
+    public const IGNORED_EXTENSION_FILE_TYPES = '/\\.(pdb|md|markdown|php|rst|txt|json)$/';
+    public const IGNORED_EXTENSION_FILES = [
+        // files
+        'ChangeLog',
+        'COPYING',
+        'CREDITS',
+        'INSTALL',
+        'LICENSE',
+        'LICENSE.BINYAML',
+        'LICENSE.IMAGEMAGICK',
+        'NOTICE',
+        'README',
+        'THIRD_PARTY_NOTICES',
+        // dirs
+        'contrib',
+        'examples',
+        'liblzf',
+        'tests',
+    ];
+
     public static function isCore(string $ext, Version $version): bool
     {
         $key = $version->major . '.' . $version->minor;
 
-        return isset(self::CORE[$key]) && in_array($ext, self::CORE[$key]);
+        return isset(self::CORE[$key]) && in_array($ext, self::CORE[$key], true);
     }
 
     public static function isBundled(string $ext, Version $version): bool
     {
         $key = $version->major . '.' . $version->minor;
 
-        return isset(self::CORE[$key]) && in_array($ext, self::CORE[$key]);
+        return isset(self::CORE[$key]) && in_array($ext, self::CORE[$key], true);
+    }
+
+    public static function isZend(string $ext): bool
+    {
+        return in_array($ext, self::ZEND_EXTENSIONS, true);
     }
 
     public static function getDir(Version $version): string

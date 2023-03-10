@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace Zoo;
+namespace Herd;
 
 use Dogma\Application\Colors as C;
 use Dogma\Application\Configurator;
@@ -31,7 +31,7 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     Debugger::$maxLength = 1000;
     Debugger::$showLocation = true;
 } else {
-    echo 'PHP-Zoo: Run `composer install` to install dependencies.';
+    echo 'Herd: Run `composer install` to install dependencies.';
     exit(2);
 }
 
@@ -46,12 +46,12 @@ $arguments = [
     'info' =>           ['f', Configurator::VALUE, 'info about version', 'expr'],
     'extension' =>      ['e', Configurator::FLAG_VALUE, 'list/install/uninstall extensions (combine with other actions)', 'name[:expr]'],
         'Configuration:',
-    'on' =>             ['o', Configurator::FLAG_VALUE, 'extension ON on versions', 'expr'],
-    'off' =>            ['O', Configurator::FLAG_VALUE, 'extension OFF on versions', 'expr'],
+    'on' =>             ['o', Configurator::FLAG_VALUE, 'extension ON for versions', 'expr'],
+    'off' =>            ['O', Configurator::FLAG_VALUE, 'extension OFF for versions', 'expr'],
     'configure' =>      ['c', Configurator::FLAG_VALUE, 'update php.ini files from templates', 'expr'],
     'template' =>       ['t', Configurator::FLAG, 'apply action on configuration templates instead (on/off/jitOn/JitOff)'],
-    //'jitOn' =>          ['j', Configurator::FLAG_VALUE, 'JIT compiler ON on versions (PHP 8)', 'expr'],
-    //'jitOff' =>         ['J', Configurator::FLAG_VALUE, 'JIT compiler OFF on versions (PHP 8)', 'expr'],
+    //'jitOn' =>          ['j', Configurator::FLAG_VALUE, 'JIT compiler ON for versions (PHP 8)', 'expr'],
+    //'jitOff' =>         ['J', Configurator::FLAG_VALUE, 'JIT compiler OFF for versions (PHP 8)', 'expr'],
     //'startCgi' =>       ['g', Configurator::VALUE, 'start CGI worker from version', 'version[:port]'],
     //'stopCgi' =>        ['G', Configurator::FLAG, 'stop CGI worker (kill process)'],
     //'use' =>            ['u', Configurator::VALUE, 'use version in local environment (local PATH)', 'expr'],
@@ -95,7 +95,7 @@ if (!$config->noLogo) {
 if ($config->help === true || (!$config->hasValues() && (!$config->config))) {
     $console->writeLn('Tool for downloading, updating and configuring many PHP versions at once (Windows only).')->ln();
 
-    $console->writeLn('Usage: ' . C::lyellow('php-zoo --action "versions" [options]'))->ln();
+    $console->writeLn('Usage: ' . C::lyellow('herd --action "versions" [options]'))->ln();
 
     $console->write($config->renderHelp());
 
@@ -112,14 +112,14 @@ if ($config->help === true || (!$config->hasValues() && (!$config->config))) {
     $console->writeLn('  More expressions can be used with ' . C::white('","') . ' as separator.');
 
     $console->ln()->writeLn('Examples:');
-    $console->writeLn(C::lyellow('  php-zoo -i "**^"') . ' will install all latest versions in nts-64 variant (5.5 to 8.0).');
-    $console->writeLn(C::lyellow('  php-zoo -U 73_32,74_32') . ' will uninstall all obsolete versions in nts-32 variants of 7.3 and 7.4.');
-    $console->writeLn(C::lyellow('  php-zoo -n 7ts') . ' will check if you have all last versions of 7.x-ts-64 installed.');
+    $console->writeLn(C::lyellow('  herd -i "**^"') . ' will install all latest versions in nts-64 variant (5.5 to 8.0).');
+    $console->writeLn(C::lyellow('  herd -U 73_32,74_32') . ' will uninstall all obsolete versions in nts-32 variants of 7.3 and 7.4.');
+    $console->writeLn(C::lyellow('  herd -n 7ts') . ' will check if you have all last versions of 7.x-ts-64 installed.');
 
     $console->ln()->writeLn('Installing extensions:');
     $console->writeLn('  To list/install/uninstall extensions add ' . C::white('--extension')
         . ' parameter and the specified action will be performed on extension instead. Eg. '
-        . C::lyellow('php-zoo -i 7 -e imagick:^')
+        . C::lyellow('herd -i 7 -e imagick:^')
         . ' will install latest compatible imagick extension version on all installed PHP 7 versions');
     exit;
 } elseif ($config->license || $config->help === 'license') {
@@ -133,7 +133,7 @@ if ($config->config) {
     }
 }
 
-$application = new App($console);
+$application = new Installer($console);
 $application->run($config);
 
 /*

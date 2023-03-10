@@ -3,7 +3,7 @@
 namespace Dogma\Tests\Debug;
 
 use Dogma\Tester\Assert;
-use Zoo\Version;
+use Herd\Version;
 
 require_once __DIR__ . '/../bootstrap.php';
 

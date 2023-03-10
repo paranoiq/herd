@@ -1,9 +1,10 @@
 <?php declare(strict_types = 1);
 
-namespace Zoo;
+namespace Herd;
 
 use Closure;
 use Dogma\Io\Io;
+use Dogma\Re;
 use Dogma\ShouldNotHappenException;
 use Dogma\Str;
 use ReflectionExtension;
@@ -26,7 +27,7 @@ class Caller
      * Must be a system function, closure or static method without dependencies and only with constant arguments.
      *
      * @param string $binary
-     * @param callable $callback
+     * @param callable&array{class-string, string} $callback
      * @return array
      */
     public static function callOther(string $binary, callable $callback): array
@@ -51,7 +52,7 @@ class Caller
         }
         rd($code);
 
-        $match = Str::match($code, '~\\{(.*)\\}~s');
+        $match = Re::match($code, '~\\{(.*)\\}~s');
         rd(Str::between($code, '{', '}'));
         rd($match[1]);
 

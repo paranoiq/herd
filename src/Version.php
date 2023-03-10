@@ -1,11 +1,11 @@
 <?php declare(strict_types = 1);
 
-namespace Zoo;
+namespace Herd;
 
 use Dogma\Comparable;
 use Dogma\Equalable;
+use Dogma\Re;
 use Dogma\ShouldNotHappenException;
-use Dogma\Str;
 use Dogma\StrictBehaviorMixin;
 use RuntimeException;
 use function array_keys;
@@ -30,21 +30,21 @@ class Version implements Comparable, Equalable
 
     public static function parseUrl(string $url): self
     {
-        $match = Str::match($url, '~php-([0-9]+)(?:\\.([0-9]+))?(?:\\.([0-9]+(?:(?:alpha|beta|RC)[0-9]+)?))?-?(nts)?.*(x64|x86|Win32)~i');
+        $match = Re::match($url, '~php-([0-9]+)(?:\\.([0-9]+))?(?:\\.([0-9]+(?:(?:alpha|beta|RC)[0-9]+)?))?-?(nts)?.*(x64|x86|Win32)~i');
         [, $major, $minor, $patch, $nts, $bits] = $match;
 
         return new self(
-            self::parseVer($major),
-            self::parseVer($minor),
-            self::parseVer($patch),
+            self::parseVersion($major),
+            self::parseVersion($minor),
+            self::parseVersion($patch),
             $nts !== 'nts',
             $bits === 'x86' || $bits === 'Win32' || $bits === 'win32' ? 32 : 64,
         );
     }
 
-    public static function parseDir(string $dir): self
+    public static function parseDirectory(string $dir): self
     {
-        $match = Str::match($dir, '~([0-9]+)(?:\\.([0-9]+))?(?:\\.([0-9]+(?:(?:alpha|beta|RC)[0-9]+)?))?-?(ts)?-?(32)?~');
+        $match = Re::match($dir, '~([0-9]+)(?:\\.([0-9]+))?(?:\\.([0-9]+(?:(?:alpha|beta|RC)[0-9]+)?))?-?(ts)?-?(32)?~');
         if (!$match) {
             throw new ShouldNotHappenException('Wrong directory');
         }
@@ -52,22 +52,22 @@ class Version implements Comparable, Equalable
         [, $major, $minor, $patch, $ts, $bits] = $match;
 
         return new self(
-            self::parseVer($major),
-            self::parseVer($minor),
-            self::parseVer($patch),
+            self::parseVersion($major),
+            self::parseVersion($minor),
+            self::parseVersion($patch),
             $ts === 'ts',
             $bits === '32' ? 32 : 64,
         );
     }
 
-    public static function parseExp(string|bool|float $expression, ?Version $platform = null): self
+    public static function parseExpression(string|bool|float $expression, ?Version $platform = null): self
     {
         if ($expression === true) {
             $expression = '*';
         }
         $expression = (string) $expression;
 
-        $match = Str::match($expression, '~([0-9]+?|[*^_])(?:\\.?([0-9]+?|[*^_]))?(?:\\.?([0-9]+?(?:(?:alpha|beta|rc)[0-9]+)?|[*^_]))?-?(nts|ts|\\*)?-?(32|64|\\*)?$~i');
+        $match = Re::match($expression, '~([0-9]+?|[*^_])(?:\\.?([0-9]+?|[*^_]))?(?:\\.?([0-9]+?(?:(?:alpha|beta|rc)[0-9]+)?|[*^_]))?-?(nts|ts|\\*)?-?(32|64|\\*)?$~i');
         if (!$match) {
             throw new RuntimeException('Invalid version expression.');
         }
@@ -78,15 +78,15 @@ class Version implements Comparable, Equalable
         $bits = $platform !== null ? $platform->bits : $bits;
 
         return new self(
-            self::parseVer($major),
-            self::parseVer($minor),
-            self::parseVer($patch),
+            self::parseVersion($major),
+            self::parseVersion($minor),
+            self::parseVersion($patch),
             ($ts === '' || $ts === null) ? false : ($ts === '*' ? null : $ts === 'ts'),
             ($bits === '' || $bits === null) ? 64 : ($bits === '*' ? null : (int) $bits),
         );
     }
 
-    private static function parseVer(?string $value): int|string|bool|null
+    private static function parseVersion(?string $value): int|string|bool|null
     {
         if ($value === null || $value === '' || $value === '*') {
             return null;
@@ -161,24 +161,24 @@ class Version implements Comparable, Equalable
 
     public function format(): string
     {
-        return self::formatVer($this->major)
-            . '.' . self::formatVer($this->minor)
-            . '.' . self::formatVer($this->patch)
+        return self::formatVersion($this->major)
+            . '.' . self::formatVersion($this->minor)
+            . '.' . self::formatVersion($this->patch)
             . ($this->safe === null ? '-*' : ($this->safe ? '-ts' : ''))
             . ($this->bits === null ? '-*' : ($this->bits === 32 ? '-32' : ''));
     }
 
     public function formatShort(): string
     {
-        return str_replace('*', '✔', self::formatVer($this->major))
-            . ($this->minor ? '.' . self::formatVer($this->minor) : '')
-            . ($this->patch ? '.' . self::formatVer($this->patch) : '');
+        return str_replace('*', '✔', self::formatVersion($this->major))
+            . ($this->minor ? '.' . self::formatVersion($this->minor) : '')
+            . ($this->patch ? '.' . self::formatVersion($this->patch) : '');
     }
 
     public function family(): string
     {
-        return self::formatVer($this->major)
-            . '.' . self::formatVer($this->minor)
+        return self::formatVersion($this->major)
+            . '.' . self::formatVersion($this->minor)
             . '.*'
             . ($this->safe === null ? '-*' : ($this->safe ? '-ts' : ''))
             . ($this->bits === null ? '-*' : ($this->bits === 32 ? '-32' : ''));
@@ -186,8 +186,8 @@ class Version implements Comparable, Equalable
 
     public function familySafe(): string
     {
-        return self::formatVer($this->major)
-            . '.' . self::formatVer($this->minor)
+        return self::formatVersion($this->major)
+            . '.' . self::formatVersion($this->minor)
             . ($this->safe === null ? '' : ($this->safe ? '-ts' : ''))
             . ($this->bits === null ? '' : ($this->bits === 32 ? '-32' : ''));
     }
@@ -196,7 +196,7 @@ class Version implements Comparable, Equalable
      * @param int|bool|null $value
      * @return string
      */
-    private static function formatVer(int|string|bool|null $value): string
+    private static function formatVersion(int|string|bool|null $value): string
     {
         return $value === null ? '*' : ($value === true ? '^' : ($value === false ? '_' : (string) $value));
     }
@@ -218,14 +218,14 @@ class Version implements Comparable, Equalable
         $major = is_int($this->major) ? $this->major : $that->major;
         $other = is_int($this->major) ? $that->major : $this->major;
         $last = $families ? max(array_keys($families)) : null;
-        if (!self::matchVer($major, $other, $last)) {
+        if (!self::matchVersion($major, $other, $last)) {
             return false;
         }
 
         $minor = is_int($this->minor) ? $this->minor : $that->minor;
         $other = is_int($this->minor) ? $that->minor : $this->minor;
         $last = isset($families[$major]) ? max(array_keys($families[$major])) : null;
-        if (!self::matchVer($minor, $other, $last)) {
+        if (!self::matchVersion($minor, $other, $last)) {
             return false;
         }
 
@@ -233,14 +233,14 @@ class Version implements Comparable, Equalable
         $other = is_int($this->patch) ? $that->patch : $this->patch;
         // search for last patch number in available versions
         $last = null;
-        $familyKeys = ["$major.$minor.*", "$major.$minor.*-32", "$major.$minor.*-ts", "$major.$minor.*-ts-32"];
+        $familyKeys = ["{$major}.{$minor}.*", "{$major}.{$minor}.*-32", "{$major}.{$minor}.*-ts", "{$major}.{$minor}.*-ts-32"];
         foreach ($familyKeys as $key) {
             if (isset($available[$key])) {
                 $versions = $available[$key];
                 $last = end($versions)->patch;
             }
         }
-        if (!self::matchVer($patch, $other, $last)) {
+        if (!self::matchVersion($patch, $other, $last)) {
             return false;
         }
 
