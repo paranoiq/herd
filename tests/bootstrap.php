@@ -1,4 +1,4 @@
-<?php declare(strict_types = 1);
+<?php
 
 // phpcs:disable SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable
 
@@ -7,7 +7,7 @@ use Tracy\Debugger;
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../vendor/nette/tester/src/bootstrap.php';
 
-if (!empty($_SERVER['argv'])) {
+if (!empty($_SERVER['argv'])) { // @phpstan-ignore-line ❤ empty()
     // may be running from command line, but under 'cgi-fcgi' SAPI
     header('Content-Type: text/plain');
 } elseif (PHP_SAPI !== 'cli') {

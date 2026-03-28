@@ -1,14 +1,15 @@
-<?php declare(strict_types = 1);
+<?php
 
-namespace Zoo;
+namespace Herd;
 
 use Closure;
 use Dogma\Io\Io;
-use Dogma\ShouldNotHappenException;
+use Dogma\Re;
 use Dogma\Str;
 use ReflectionExtension;
 use ReflectionFunction;
 use ReflectionMethod;
+use RuntimeException;
 use function array_merge;
 use function explode;
 use function get_loaded_extensions;
@@ -26,7 +27,7 @@ class Caller
      * Must be a system function, closure or static method without dependencies and only with constant arguments.
      *
      * @param string $binary
-     * @param callable $callback
+     * @param callable&array{class-string, string} $callback
      * @return array
      */
     public static function callOther(string $binary, callable $callback): array
@@ -38,7 +39,7 @@ class Caller
         } elseif (is_string($callback) || $callback instanceof Closure) {
             $ref = new ReflectionFunction($callback);
         } else {
-            throw new ShouldNotHappenException('Invalid callback.');
+            throw new RuntimeException('Invalid callback.');
         }
 
         if ($ref->isUserDefined()) {
@@ -51,7 +52,7 @@ class Caller
         }
         rd($code);
 
-        $match = Str::match($code, '~\\{(.*)\\}~s');
+        $match = Re::match($code, '~\\{(.*)\\}~s');
         rd(Str::between($code, '{', '}'));
         rd($match[1]);
 

@@ -1,17 +1,43 @@
-<?php declare(strict_types = 1);
+<?php
 
-namespace Zoo;
+namespace Herd\Info;
 
-use Dogma\StaticClassMixin;
+use Herd\Version;
 use function in_array;
 
-class Extensions
+class PhpInfo
 {
-    use StaticClassMixin;
+    public const FAMILIES = [
+        3 => [0],
+        4 => [0, 1, 2, 3, 4],
+        5 => [1, 2, 3, 4, 5, 6],
+        7 => [0, 1, 2, 3, 4],
+        8 => [0, 1, 2, 3, 4, 5],
+    ];
 
-    public const CORE = [
+    public const CORE_EXTENSIONS = [
+        '8.5' => [
+            'bcmath', 'calendar', 'core', 'ctype', 'date', 'dom', 'filter', 'hash', 'iconv', 'json',
+            'libxml', 'mysqlnd', 'pcre', 'pdo', 'phar', 'readline', 'reflection', 'session', 'simplexml',
+            'spl', 'standard', 'tokenizer', 'uri', 'xml', 'xmlreader', 'xmlwriter', 'zlib',
+        ],
+        '8.4' => [
+            'bcmath', 'calendar', 'core', 'ctype', 'date', 'dom', 'filter', 'hash', 'iconv', 'json',
+            'libxml', 'mysqlnd', 'pcre', 'pdo', 'phar', 'readline', 'reflection', 'session', 'simplexml',
+            'spl', 'standard', 'tokenizer', 'xml', 'xmlreader', 'xmlwriter', 'zlib',
+        ],
+        '8.3' => [
+            'bcmath', 'calendar', 'core', 'ctype', 'date', 'dom', 'filter', 'hash', 'iconv', 'json',
+            'libxml', 'mysqlnd', 'pcre', 'pdo', 'phar', 'readline', 'reflection', 'session', 'simplexml',
+            'spl', 'standard', 'tokenizer', 'xml', 'xmlreader', 'xmlwriter', 'zlib',
+        ],
+        '8.2' => [
+            'bcmath', 'calendar', 'core', 'ctype', 'date', 'dom', 'filter', 'hash', 'iconv', 'json',
+            'libxml', 'mysqlnd', 'pcre', 'pdo', 'phar', 'readline', 'reflection', 'session', 'simplexml',
+            'spl', 'standard', 'tokenizer', 'xml', 'xmlreader', 'xmlwriter', 'zlib',
+            // -zip
+        ],
         '8.1' => [
-            // todo: update. this is 8.0 copy
             'bcmath', 'calendar', 'core', 'ctype', 'date', 'dom', 'filter', 'hash', 'iconv', 'json',
             'libxml', 'mysqlnd', 'pcre', 'pdo', 'phar', 'readline', 'reflection', 'session', 'simplexml',
             'spl', 'standard', 'tokenizer', 'xml', 'xmlreader', 'xmlwriter', 'zip', 'zlib',
@@ -109,26 +135,48 @@ class Extensions
             'bcmath', 'calendar', 'com', 'variant', 'ftp', 'mysql',
             'odbc', 'pcre', 'session',
             'standard', 'wddx', 'xml',
+            // -aps_tags -posix -tokenizer -zlib +bcmath +calendar +variant +ftp +odbc +wddx
         ],
         '4.0' => [ // todo: `php40 -m` segfaults
-            'bcmath', 'calendar', 'com', 'variant', 'ftp', 'mysql',
-            'odbc', 'pcre', 'session',
-            'standard', 'wddx', 'xml',
+            'asp_tags', 'com', 'core', 'ctype', 'mysql',
+            'pcre', 'posix', 'session',
+            'standard', 'tokenizer', 'xml', 'zlib',
+            // +asp_tags +com +ctype +session +tokenizer
         ],
         '3.0' => [ // todo: `php30 -m` unable to parse configuration file
-            'bcmath', 'calendar', 'com', 'variant', 'ftp', 'mysql',
-            'odbc', 'pcre', 'session',
-            'standard', 'wddx', 'xml'
+            'core', 'mysql',
+            'pcre', 'posix',
+            'standard', 'xml', 'zlib',
         ],
     ];
 
-    public const BUNDLED = [
-        '8.1' => [ // todo: update. this is 8.0 copy
+    public const BUNDLED_EXTENSIONS = [
+        '8.4' => [
+            'bz2', 'com_dotnet', 'curl', 'dba', 'dl_test', 'enchant', 'exif', 'ffi', 'fileinfo', 'ftp', 'gd', 'gettext',
+            'gmp', 'intl', 'ldap', 'mbstring', 'mysqli', 'odbc', 'opcache', 'openssl',
+            'pdo_firebird', 'pdo_mysql', 'pdo_odbc', 'pdo_pgsql', 'pdo_sqlite', 'pgsql',
+            'shmop', 'snmp', 'soap', 'sockets', 'sodium', 'sqlite3', 'sysvshm', 'tidy', 'xsl', 'zend_test', 'zip'
+            // -imap -oci8_19 -pdo_oci
+        ],
+        '8.3' => [
+            'bz2', 'com_dotnet', 'curl', 'dba', 'dl_test', 'enchant', 'exif', 'ffi', 'fileinfo', 'ftp', 'gd', 'gettext',
+            'gmp', 'imap', 'intl', 'ldap', 'mbstring', 'mysqli', 'oci8_19', 'odbc', 'opcache', 'openssl',
+            'pdo_firebird', 'pdo_mysql', 'pdo_oci', 'pdo_odbc', 'pdo_pgsql', 'pdo_sqlite', 'pgsql',
+            'shmop', 'snmp', 'soap', 'sockets', 'sodium', 'sqlite3', 'sysvshm', 'tidy', 'xsl', 'zend_test', 'zip'
+        ],
+        '8.2' => [
+            'bz2', 'com_dotnet', 'curl', 'dba', 'dl_test', 'enchant', 'exif', 'ffi', 'fileinfo', 'ftp', 'gd', 'gettext',
+            'gmp', 'imap', 'intl', 'ldap', 'mbstring', 'mysqli', 'oci8_19', 'odbc', 'opcache', 'openssl',
+            'pdo_firebird', 'pdo_mysql', 'pdo_oci', 'pdo_odbc', 'pdo_pgsql', 'pdo_sqlite', 'pgsql',
+            'shmop', 'snmp', 'soap', 'sockets', 'sodium', 'sqlite3', 'sysvshm', 'tidy', 'xsl', 'zend_test', 'zip'
+            // +zip
+        ],
+        '8.1' => [
             'bz2', 'com_dotnet', 'curl', 'dba', 'enchant', 'exif', 'ffi', 'fileinfo', 'ftp', 'gd', 'gettext', 'gmp',
-            'imap', 'intl', 'ldap', 'mbstring', 'mysqli', 'oci8_12c', 'oci8_19', 'odbc', 'opcache', 'openssl',
-            'pdo_firebird', 'pdo_mysql', 'pdo_oci', 'pdo_odbc', 'pdo_pgsql', 'pdo_sqlite', 'pgsql', 'phpdbg_webhelper',
+            'imap', 'intl', 'ldap', 'mbstring', 'mysqli', 'oci8_19', 'odbc', 'opcache', 'openssl',
+            'pdo_firebird', 'pdo_mysql', 'pdo_oci', 'pdo_odbc', 'pdo_pgsql', 'pdo_sqlite', 'pgsql',
             'shmop', 'snmp', 'soap', 'sockets', 'sodium', 'sqlite3', 'sysvshm', 'tidy', 'xsl', 'zend_test',
-            // -pcov -xmlrpc +oci8_19
+            // -oci8_12c -phpdbg_webhelper
         ],
         '8.0' => [
             'bz2', 'com_dotnet', 'curl', 'dba', 'enchant', 'exif', 'ffi', 'fileinfo', 'ftp', 'gd', 'gettext', 'gmp',
@@ -269,21 +317,48 @@ class Extensions
         ],
     ];
 
-    public static function isCore(string $ext, Version $version): bool
+    public const ZEND_EXTENSIONS = ['opcache', 'blackfire', 'phpdbg', 'xdebug'];
+
+    public const IGNORED_EXTENSION_FILE_TYPES = '/\\.(pdb|md|markdown|php|rst|txt|json)$/';
+    public const IGNORED_EXTENSION_FILES = [
+        // files
+        'ChangeLog',
+        'COPYING',
+        'CREDITS',
+        'INSTALL',
+        'LICENSE',
+        'LICENSE.BINYAML',
+        'LICENSE.IMAGEMAGICK',
+        'NOTICE',
+        'README',
+        'THIRD_PARTY_NOTICES',
+        // dirs
+        'contrib',
+        'examples',
+        'liblzf',
+        'tests',
+    ];
+
+    public static function isCoreExtension(string $ext, Version $version): bool
     {
         $key = $version->major . '.' . $version->minor;
 
-        return isset(self::CORE[$key]) && in_array($ext, self::CORE[$key]);
+        return isset(self::CORE_EXTENSIONS[$key]) && in_array($ext, self::CORE_EXTENSIONS[$key], true);
     }
 
-    public static function isBundled(string $ext, Version $version): bool
+    public static function isBundledExtension(string $ext, Version $version): bool
     {
         $key = $version->major . '.' . $version->minor;
 
-        return isset(self::CORE[$key]) && in_array($ext, self::CORE[$key]);
+        return isset(self::CORE_EXTENSIONS[$key]) && in_array($ext, self::CORE_EXTENSIONS[$key], true);
     }
 
-    public static function getDir(Version $version): string
+    public static function isZendExtension(string $ext): bool
+    {
+        return in_array($ext, self::ZEND_EXTENSIONS, true);
+    }
+
+    public static function extensionDir(Version $version): string
     {
         if ($version->major <= 3) {
             return '';
@@ -294,7 +369,7 @@ class Extensions
         }
     }
 
-    public static function getFilePrefix(Version $version): string
+    public static function extensionFilePrefix(Version $version): string
     {
         if ($version->major <= 3) {
             return 'php3_';
@@ -303,7 +378,7 @@ class Extensions
         }
     }
 
-    public static function getIniPrefix(Version $version): string
+    public static function extensionIniPrefix(Version $version): string
     {
         if ($version->major <= 3) {
             return 'php3_';
@@ -314,7 +389,7 @@ class Extensions
         }
     }
 
-    public static function getIniSuffix(Version $version): string
+    public static function extensionIniSuffix(Version $version): string
     {
         if ($version->major < 7 || ($version->major === 7 && $version->minor <= 1)) {
             return '.dll';
@@ -323,7 +398,7 @@ class Extensions
         }
     }
 
-    public static function dllName(Version $version, string $name): string
+    public static function extensionDllName(Version $version, string $name): string
     {
         if ($name === 'memcached') {
             return 'memcache';
@@ -342,7 +417,7 @@ class Extensions
         }
     }
 
-    public static function internalName(Version $version, string $name): string
+    public static function extensionInternalName(Version $version, string $name): string
     {
         if ($name === 'memcached') {
             return 'memcache';
