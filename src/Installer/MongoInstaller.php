@@ -27,6 +27,13 @@ class MongoInstaller extends DockerInstaller
     public array $ports = [27017];
     public array $envVars;
 
+    public function translatePort(int $port, Version $version): int
+    {
+        // 8.0.19 -> 28019
+
+        return '2' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+    }
+
     public function loadReleaseNotesListsUrls(): void
     {
         $this->releaseNotesListsUrls = [
@@ -46,13 +53,6 @@ class MongoInstaller extends DockerInstaller
                 }
             }
         }
-    }
-
-    public function translatePort(int $port, Version $version): int
-    {
-        // 8.0.19 -> 28019
-
-        return '2' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
     }
 
 }

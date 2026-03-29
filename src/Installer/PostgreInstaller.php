@@ -26,21 +26,21 @@ class PostgreInstaller extends DockerInstaller
     public array $ports = [5432];
     public array $envVars = ['POSTGRES_PASSWORD' => 'root']; // admin user is "postgre"
 
-    public function loadReleaseNotesListsUrls(): void
-    {
-        $this->releaseNotesListsUrls = ['all' => 'https://www.postgresql.org/docs/release/'];
-    }
-
     public function translatePort(int $port, Version $version): int
     {
         // 9.6.24 -> 59624
         // 10.23  -> 51023
 
         if ($version->major < 10) {
-            return '5' . $version->major . $version->minor . str_pad($version->patch, '0', STR_PAD_LEFT);
+            return '5' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
         } else {
-            return '5' . $version->major . str_pad($version->minor, '0', STR_PAD_LEFT);
+            return '5' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT);
         }
+    }
+
+    public function loadReleaseNotesListsUrls(): void
+    {
+        $this->releaseNotesListsUrls = ['all' => 'https://www.postgresql.org/docs/release/'];
     }
 
     /** @override */

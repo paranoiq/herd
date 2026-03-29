@@ -29,6 +29,14 @@ class ValkeyInstaller extends DockerInstaller
     public array $ports = [6379];
     public array $envVars = [];
 
+    public function translatePort(int $port, Version $version): int
+    {
+        // 7.2.12 -> 47212
+        // 8.4.1  -> 48401
+
+        return '4' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+    }
+
     public function loadReleaseNotesListsUrls(): void
     {
         $this->releaseNotesListsUrls = ['all' => 'https://valkey.io/download/releases/'];
@@ -76,14 +84,6 @@ class ValkeyInstaller extends DockerInstaller
         $t = $version->type ? ' ' . $version->type : '';
 
         return $version->format3() . $t;
-    }
-
-    public function translatePort(int $port, Version $version): int
-    {
-        // 7.2.12 -> 47212
-        // 8.4.1  -> 48401
-
-        return '4' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
     }
 
 }

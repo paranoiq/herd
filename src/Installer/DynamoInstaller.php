@@ -26,18 +26,18 @@ class DynamoInstaller extends DockerInstaller
     public array $ports = [8000];
     public array $envVars;
 
-    public function loadReleaseNotesListsUrls(): void
-    {
-        $this->releaseNotesListsUrls = [
-            "all" => "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocalHistory.html",
-        ];
-    }
-
     public function translatePort(int $port, Version $version): int
     {
         // 1.25.1 -> 21251
 
         return '2' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
+    }
+
+    public function loadReleaseNotesListsUrls(): void
+    {
+        $this->releaseNotesListsUrls = [
+            "all" => "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocalHistory.html",
+        ];
     }
 
 }

@@ -28,6 +28,16 @@ class TimescaleInstaller extends DockerInstaller
     public array $envVars = ['POSTGRES_PASSWORD' => 'root'];
     public array $pgVersions = ['pg15', 'pg16', 'pg17', 'pg18'];
 
+    public function translatePort(int $port, Version $version): int
+    {
+        // 2.17.0-pg18 -> 42170
+
+        $prefixes = ['pg15' => '1', 'pg16' => '2', 'pg17' => '3', 'pg18' => '4'];
+        $prefix = $prefixes[$version->build];
+
+        return $prefix . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
+    }
+
     public function loadReleaseNotesListsUrls(): void
     {
         $this->releaseNotesListsUrls = [];
@@ -46,14 +56,6 @@ class TimescaleInstaller extends DockerInstaller
                 }
             }
         }
-    }
-
-    public function translatePort(int $port, Version $version): int
-    {
-        // 2.17.0 -> 62170
-        // todo: does not take pg version into account
-
-        return '6' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
     }
 
     /** @override */

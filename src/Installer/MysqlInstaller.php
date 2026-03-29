@@ -32,6 +32,14 @@ class MysqlInstaller extends DockerInstaller
     public array $ports = [3306];
     public array $envVars = ['MYSQL_ROOT_PASSWORD' => 'root'];
 
+    public function translatePort(int $port, Version $version): int
+    {
+        // 5.7.44 -> 35744
+        // 8.0.11 -> 38011
+
+        return '3' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+    }
+
     public function loadReleaseNotesListsUrls(): void
     {
         $baseUrl = 'https://dev.mysql.com/';
@@ -68,14 +76,6 @@ class MysqlInstaller extends DockerInstaller
                 $this->remote[$this->familyKey($version)][$this->versionKey($version)] = $version;
             }
         }
-    }
-
-    public function translatePort(int $port, Version $version): int
-    {
-        // 5.7.44 -> 35744
-        // 8.0.11 -> 38011
-
-        return '3' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
     }
 
     // vintage

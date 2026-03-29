@@ -27,18 +27,18 @@ class MemcachedInstaller extends DockerInstaller
     public array $ports = [11211];
     public array $envVars;
 
-    public function loadReleaseNotesListsUrls(): void
-    {
-        $this->releaseNotesListsUrls = [
-            "all" => "https://github.com/memcached/memcached/wiki/ReleaseNotes",
-        ];
-    }
-
     public function translatePort(int $port, Version $version): int
     {
         // 1.6.40 -> 11640
 
         return '1' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+    }
+
+    public function loadReleaseNotesListsUrls(): void
+    {
+        $this->releaseNotesListsUrls = [
+            "all" => "https://github.com/memcached/memcached/wiki/ReleaseNotes",
+        ];
     }
 
 }

@@ -94,8 +94,8 @@ $arguments = [
     'presto' =>         ['',  Cf::FLAG, $ch("Presto", "f41b0a") . "      - OLAP SQL distributed database"], // _ (0.279.2 -> 2792)
     'trino' =>          ['',  Cf::FLAG, $ch("Trino", "dd00a1") . "       - OLAP SQL distributed database, Presto fork"], // _ (479 -> 4790)
 
-    'timescale' =>      ['T', Cf::FLAG, $ch("TimescaleDB", "f5ff80") . " - time-series SQL database, PostgreSQL extension"], // 6 (2.17.0 -> 62170)
-    'quest' =>          ['Q', Cf::FLAG, $ch("QuestDB", "a33153") . "     - time-series SQL database"], // 1, 4 (main 8.2.1 -> 58021, admin 8.2.1 -> 49021)
+    'timescale' =>      ['T', Cf::FLAG, $ch("TimescaleDB", "f5ff80") . " - time-series SQL database, PostgreSQL extension"], // 1-4 (2.17.0-pg18 -> 42170)
+    'quest' =>          ['Q', Cf::FLAG, $ch("QuestDB", "a33153") . "     - time-series SQL database"], // 1, 4 (main 8.2.1 -> 58021, admin 8.2.1 -> 48021)
     'influx' =>         ['I', Cf::FLAG, $ch("InfluxDB", "b619b6") . "    - time-series SQL/InfluxQL database"], // 6 (2.7.1 -> 62071)
 
     // Prometheus ? (metrics db)

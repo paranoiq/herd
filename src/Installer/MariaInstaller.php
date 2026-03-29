@@ -25,11 +25,6 @@ class MariaInstaller extends DockerInstaller
     public array $ports = [3306];
     public array $envVars = ['MYSQL_ROOT_PASSWORD' => 'root'];
 
-    public function loadReleaseNotesListsUrls(): void
-    {
-        $this->releaseNotesListsUrls = ['all' => 'https://mariadb.org/mariadb/all-releases/'];
-    }
-
     public function translatePort(int $port, Version $version): int
     {
         // 5.5.64  -> 15564
@@ -47,6 +42,11 @@ class MariaInstaller extends DockerInstaller
         }
 
         return $major . $minor . str_pad($patch, 2, '0', STR_PAD_LEFT);
+    }
+
+    public function loadReleaseNotesListsUrls(): void
+    {
+        $this->releaseNotesListsUrls = ['all' => 'https://mariadb.org/mariadb/all-releases/'];
     }
 
 }

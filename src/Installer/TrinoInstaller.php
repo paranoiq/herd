@@ -29,6 +29,13 @@ class TrinoInstaller extends DockerInstaller
     public array $ports = [8080];
     public array $envVars = [];
 
+    public function translatePort(int $port, Version $version): int
+    {
+        // 479 -> 4790
+
+        return str_pad($version->minor, 3, '0', STR_PAD_LEFT) . ($version->patch ?: 0);
+    }
+
     /**
      * @override
      * @return array<string, Version>
@@ -107,13 +114,6 @@ class TrinoInstaller extends DockerInstaller
         $this->releaseNotesListsUrls = [
             "all" => "https://trino.io/docs/current/release.html",
         ];
-    }
-
-    public function translatePort(int $port, Version $version): int
-    {
-        // 479 -> 4790
-
-        return str_pad($version->minor, 3, '0', STR_PAD_LEFT) . ($version->patch ?: 0);
     }
 
 }

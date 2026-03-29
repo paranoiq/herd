@@ -27,6 +27,23 @@ class CockroachInstaller extends DockerInstaller
     public array $ports = [26257, 8080]; // SQL, admin
     public array $envVars;
 
+    public function translatePort(int $port, Version $version): int
+    {
+        if ($port === 26257) {
+            // SQL
+            // 26.1.0  -> 26100
+            // 25.2.13 -> 25213
+
+            return $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+        } else {
+            // Admin UI
+            // 26.1.0  -> 46100
+            // 25.2.13 -> 45213
+
+            return ($version->major + 2) . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+        }
+    }
+
     public function dockerVersionKey(Version $version): string
     {
         return 'v' . $version->format3();
@@ -50,23 +67,6 @@ class CockroachInstaller extends DockerInstaller
                     }
                 }
             }
-        }
-    }
-
-    public function translatePort(int $port, Version $version): int
-    {
-        if ($port === 26257) {
-            // SQL
-            // 26.1.0  -> 26100
-            // 25.2.13 -> 25213
-
-            return $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
-        } else {
-            // Admin UI
-            // 26.1.0  -> 46100
-            // 25.2.13 -> 45213
-
-            return ($version->major + 2) . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
         }
     }
 

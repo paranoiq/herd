@@ -24,8 +24,17 @@ class DruidInstaller extends DockerInstaller
     public string $containerPrefix = 'druid-';
     public string $volumePrefix = 'druid-data-';
     public string $volumeTarget = '/opt/druid/var';
-    public array $ports = [8888]; // router / web console
+    public array $ports = [8888];
     public array $envVars = [];
+
+    public function translatePort(int $port, Version $version): int
+    {
+        // router / web console
+        // 36.0.0 -> 36000
+        // 35.0.1 -> 35001
+
+        return (int) ($version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch);
+    }
 
     public function loadReleaseNotesListsUrls(): void
     {
@@ -43,15 +52,6 @@ class DruidInstaller extends DockerInstaller
                 }
             }
         }
-    }
-
-    public function translatePort(int $port, Version $version): int
-    {
-        // router / web console
-        // 36.0.0 -> 36000
-        // 35.0.1 -> 35001
-
-        return (int) ($version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch);
     }
 
 }

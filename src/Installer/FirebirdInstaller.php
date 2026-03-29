@@ -30,6 +30,14 @@ class FirebirdInstaller extends DockerInstaller
     public array $ports = [3050];
     public array $envVars = ['FIREBIRD_PASSWORD' => 'root']; // admin user "SYSDBA", default password is "masterkey"
 
+    public function translatePort(int $port, Version $version): int
+    {
+        // 5.0.3  -> 35003
+        // 3.0.13 -> 33013
+
+        return '3' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+    }
+
     public function loadReleaseNotesListsUrls(): void
     {
         $baseUrl = 'https://www.firebirdsql.org';
@@ -57,14 +65,6 @@ class FirebirdInstaller extends DockerInstaller
                 $this->releaseNotesListsUrls[] = $baseUrl . $match[0];
             }
         }
-    }
-
-    public function translatePort(int $port, Version $version): int
-    {
-        // 5.0.3  -> 35003
-        // 3.0.13 -> 33013
-
-        return '3' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
     }
 
     public array $releaseDates = [

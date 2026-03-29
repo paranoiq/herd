@@ -4,7 +4,6 @@ namespace Herd\Installer;
 
 use Herd\Version;
 use function str_pad;
-use function version_compare;
 use const STR_PAD_LEFT;
 
 class CassandraInstaller extends DockerInstaller
@@ -27,18 +26,18 @@ class CassandraInstaller extends DockerInstaller
     public array $ports = [9042];
     public array $envVars;
 
-    public function loadReleaseNotesListsUrls(): void
-    {
-        $this->releaseNotesListsUrls = [
-            "all" => "https://archive.apache.org/dist/cassandra/",
-        ];
-    }
-
     public function translatePort(int $port, Version $version): int
     {
         // 4.0.19 -> 24019
 
         return '2' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+    }
+
+    public function loadReleaseNotesListsUrls(): void
+    {
+        $this->releaseNotesListsUrls = [
+            "all" => "https://archive.apache.org/dist/cassandra/",
+        ];
     }
 
 }

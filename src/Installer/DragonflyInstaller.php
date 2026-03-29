@@ -27,6 +27,13 @@ class DragonflyInstaller extends DockerInstaller
     public array $ports = [6379];
     public array $envVars;
 
+    public function translatePort(int $port, Version $version): int
+    {
+        // 1.24.8 -> 41348
+
+        return '4' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
+    }
+
     public function dockerVersionKey(Version $version): string
     {
         return 'v' . $version->format3();
@@ -48,13 +55,6 @@ class DragonflyInstaller extends DockerInstaller
                 }
             }
         }
-    }
-
-    public function translatePort(int $port, Version $version): int
-    {
-        // 1.24.8 -> 41348
-
-        return '4' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
     }
 
 }

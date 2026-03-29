@@ -27,6 +27,13 @@ class InfluxInstaller extends DockerInstaller
     public array $ports = [8086];
     public array $envVars = [];
 
+    public function translatePort(int $port, Version $version): int
+    {
+        // 2.7.1 -> 62071
+
+        return '6' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
+    }
+
     public function loadReleaseNotesListsUrls(): void
     {
         $this->releaseNotesListsUrls = [];
@@ -49,13 +56,6 @@ class InfluxInstaller extends DockerInstaller
     public function dockerVersionKey(Version $version): string
     {
         return $version->format3() . '-core';
-    }
-
-    public function translatePort(int $port, Version $version): int
-    {
-        // 2.7.1 -> 62071
-
-        return '6' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
     }
 
 }

@@ -25,6 +25,13 @@ class PrestoInstaller extends DockerInstaller
     public array $ports = [8080];
     public array $envVars = [];
 
+    public function translatePort(int $port, Version $version): int
+    {
+        // 0.279.2 -> 2792
+
+        return ($version->major ?: '') . str_pad($version->minor, 3, '0', STR_PAD_LEFT) . ($version->patch ?: '0');
+    }
+
     /** @override */
     public function familyKey(Version $version): string
     {
@@ -60,13 +67,6 @@ class PrestoInstaller extends DockerInstaller
         $this->releaseNotesListsUrls = [
             "all" => "https://prestodb.io/docs/current/release.html",
         ];
-    }
-
-    public function translatePort(int $port, Version $version): int
-    {
-        // 0.279.2 -> 2792
-
-        return ($version->major ?: '') . str_pad($version->minor, 3, '0', STR_PAD_LEFT) . $version->patch;
     }
 
 }

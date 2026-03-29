@@ -27,6 +27,19 @@ class QuestInstaller extends DockerInstaller
     public array $ports = [8812, 9000]; // PostgreSQL wire, HTTP REST / web console
     public array $envVars = [];
 
+    public function translatePort(int $port, Version $version): int
+    {
+        if ($port === 8812) {
+            // PostgreSQL wire protocol
+            // 8.2.1 -> 58021
+            return '1' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
+        } else { // 9000
+            // HTTP REST API / web console
+            // 8.2.1 -> 48021
+            return '4' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
+        }
+    }
+
     public function loadReleaseNotesListsUrls(): void
     {
         $this->releaseNotesListsUrls = [];
@@ -42,19 +55,6 @@ class QuestInstaller extends DockerInstaller
                     }
                 }
             }
-        }
-    }
-
-    public function translatePort(int $port, Version $version): int
-    {
-        if ($port === 8812) {
-            // PostgreSQL wire protocol
-            // 8.2.1 -> 58021
-            return '1' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
-        } else { // 9000
-            // HTTP REST API / web console
-            // 8.2.1 -> 49021
-            return '4' . ($version->major + 1) . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
         }
     }
 

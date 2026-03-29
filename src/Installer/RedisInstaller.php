@@ -38,6 +38,14 @@ class RedisInstaller extends DockerInstaller
         parent::run($config);
     }
 
+    public function translatePort(int $port, Version $version): int
+    {
+        // 7.2.12 -> 47212
+        // 8.4.1  -> 48401
+
+        return '4' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+    }
+
     public function loadReleaseNotesListsUrls(): void
     {
         $this->releaseNotesListsUrls = ['all' => 'https://download.redis.io/releases/'];
@@ -85,14 +93,6 @@ class RedisInstaller extends DockerInstaller
         $t = $version->type ? ' ' . $version->type : '';
 
         return $version->format3() . $t;
-    }
-
-    public function translatePort(int $port, Version $version): int
-    {
-        // 7.2.12 -> 47212
-        // 8.4.1  -> 48401
-
-        return '4' . $version->major . $version->minor . str_pad($version->patch, '0', STR_PAD_LEFT);
     }
 
 }
