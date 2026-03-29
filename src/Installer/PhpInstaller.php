@@ -71,7 +71,7 @@ class PhpInstaller
     }
 
     public function run(Configurator $config): void
-    {rl(0);
+    {
         $this->init($config);
         $this->loadLocalVersions();
 
@@ -173,7 +173,7 @@ class PhpInstaller
                 $ver = [];
                 foreach ($this->local[$name] as $version) {
                     if ($filter->match($version)) {
-                        $ver[] = $version->format5() . $this->getAliases($version);
+                        $ver[] = $version->format6() . $this->getAliases($version);
                     }
                 }
                 if ($ver !== []) {
@@ -220,7 +220,7 @@ class PhpInstaller
                 $versions = [];
                 foreach ($this->remote[$family] as $version) {
                     if ($filter->match($version)) {
-                        $versions[] = $this->isInstalled($version) ? C::lyellow($version->format5()) : $version->format5();
+                        $versions[] = $this->isInstalled($version) ? C::lyellow($version->format6()) : $version->format6();
                     }
                 }
                 if ($versions !== []) {
@@ -248,10 +248,10 @@ class PhpInstaller
                 $versionUpToDate = false;
                 foreach ($this->local[$family] ?? [] as $version) {
                     if ($version->patch === $latest) {
-                        $versions[] = C::lgreen($version->format5()) . $this->getAliases($version);
+                        $versions[] = C::lgreen($version->format6()) . $this->getAliases($version);
                         $versionUpToDate = true;
                     } else {
-                        $versions[] = C::lred($version->format5()) . $this->getAliases($version);
+                        $versions[] = C::lred($version->format6()) . $this->getAliases($version);
                     }
                 }
                 if ($versions === []) {
@@ -263,7 +263,7 @@ class PhpInstaller
                 if ($latest === null) {
                     $this->console->writeLn('    latest:    ' . C::lyellow('-unknown-'));
                 } elseif ($versions === [] || $version->patch !== $latest) {
-                    $this->console->writeLn('    latest:    ' . C::white($familyVersion->setPatch($latest)->format5()));
+                    $this->console->writeLn('    latest:    ' . C::white($familyVersion->setPatch($latest)->format6()));
                 }
                 $allInstalled = $allInstalled && $versions !== [];
                 $allUpToDate = $allUpToDate && $versionUpToDate;
@@ -287,7 +287,7 @@ class PhpInstaller
                     if (!$filter->match($version)) {
                         continue;
                     }
-                    $this->console->writeLn('  ' . C::white($version->format5()));
+                    $this->console->writeLn('  ' . C::white($version->format6()));
 
                     $key = $version->major . "." . $version->minor;
                     $extVersions = $this->probeExtensions($version);
@@ -353,7 +353,7 @@ class PhpInstaller
                 $this->console->writeLn('  ', C::white($family), ':');
                 $ver = [];
                 foreach ($versions as $extVersion) {
-                    $ver[] = $extVersion->format5();
+                    $ver[] = $extVersion->format6();
                 }
                 $this->console->writeLn('    ' . implode(', ', $ver));
             }
@@ -376,7 +376,7 @@ class PhpInstaller
                     if (!$filter->match($version)) {
                         continue;
                     }
-                    $this->console->writeLn('  ' . C::white($version->format5()));
+                    $this->console->writeLn('  ' . C::white($version->format6()));
 
                     $key = $version->major . "." . $version->minor;
                     $extVersions = $this->probeExtensions($version);
@@ -426,7 +426,7 @@ class PhpInstaller
         if ($available) {
             $this->console->write(C::lgray(' - available: '));
             foreach ($available as $av) {
-                $this->console->write($av->format5() . ', ');
+                $this->console->write($av->format6() . ', ');
             }
         } else {
             $this->console->write(C::red(' - not available'));
@@ -443,7 +443,7 @@ class PhpInstaller
     public function install(array $filters, bool $autoSelect, bool $test): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Installing ({$filter->format5()}):"));
+            $this->console->writeLn(C::white("Installing ({$filter->format6()}):"));
 
             foreach ($this->remote as $versions) {
                 foreach ($versions as $version) {
@@ -451,10 +451,10 @@ class PhpInstaller
                         continue;
                     }
                     if ($this->isInstalled($version)) {
-                        $this->console->writeLn(C::white('  ' . $version->format5()) . ' already installed');
+                        $this->console->writeLn(C::white('  ' . $version->format6()) . ' already installed');
                         continue 2;
                     }
-                    $this->console->writeLn(C::white('  ' . $version->format5()));
+                    $this->console->writeLn(C::white('  ' . $version->format6()));
 
                     if ($test) {
                         continue;
@@ -478,7 +478,7 @@ class PhpInstaller
 
     public function installVersion(Version $version): void
     {
-        $downloadUrl = $this->downloadUrls[$version->format5()];
+        $downloadUrl = $this->downloadUrls[$version->format6()];
 
         $zipFile = "{$this->baseDir}/tmp.zip";
         $zip = $this->httpHelper->downloadZip($downloadUrl, $zipFile);
@@ -486,7 +486,7 @@ class PhpInstaller
         Io::createDirectory($targetDir, Io::IGNORE);
         Io::cleanDirectory($targetDir, Io::RECURSIVE);
 
-        $this->console->ln()->writeLn("    Extracting to /php{$version->format5()}");
+        $this->console->ln()->writeLn("    Extracting to /php{$version->format6()}");
         $zip->extractTo($targetDir);
         $zip->close();
         Io::delete($zipFile);
@@ -514,21 +514,21 @@ class PhpInstaller
     public function uninstall(array $filters, bool $test): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Uninstalling ({$filter->format5()}):"));
+            $this->console->writeLn(C::white("Uninstalling ({$filter->format6()}):"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
                     if (!$filter->match($version, PhpInfo::FAMILIES, $this->local)) {
                         continue;
                     }
-                    $this->console->writeLn('  Removing ' . C::white($version->format5()));
+                    $this->console->writeLn('  Removing ' . C::white($version->format6()));
 
                     if ($test) {
                         continue;
                     }
 
                     Io::deleteDirectory($this->getVersionDirectory($version), Io::RECURSIVE);
-                    unset($this->local[$version->formatFamily()][$version->format5()]);
+                    unset($this->local[$version->formatFamily()][$version->format6()]);
 
                     $patch = $this->getLatestInstalled($version->getFamily());
                     if ($patch !== null) {
@@ -545,7 +545,7 @@ class PhpInstaller
     public function installExtension(string $extension, Version $extensionFilter, array $filters, bool $autoActivate, bool $test): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Installing extension $extension {$extensionFilter->format5()} on {$filter->format5()}:"));
+            $this->console->writeLn(C::white("Installing extension $extension {$extensionFilter->format6()} on {$filter->format5()}:"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
@@ -553,7 +553,7 @@ class PhpInstaller
                         continue;
                     }
 
-                    $this->console->writeLn("  " . C::white($version->format5()));
+                    $this->console->writeLn("  " . C::white($version->format6()));
 
                     if ($test) {
                         continue;
@@ -583,7 +583,7 @@ class PhpInstaller
                         }
 
                         foreach ($extVersions as $url => $extensionVersion) {
-                            $available[] = $extensionVersion->format5();
+                            $available[] = $extensionVersion->format6();
                             if ($extensionFilter->match($extensionVersion, [], ["{$extensionVersion->major}.{$extensionVersion->minor}.*-ts-32" => $extVersions])) {
                                 $selected = $extensionVersion;
                                 $downloadUrl = $url;
@@ -595,7 +595,7 @@ class PhpInstaller
                     } elseif ($selected === null) {
                         $this->console->writeLn(C::lred("    no version matched. available: " . implode(', ', $available)));
                     } else {
-                        $this->console->writeLn(C::white("    installing {$selected->format5()}"));
+                        $this->console->writeLn(C::white("    installing {$selected->format6()}"));
                         $this->installExtensionVersion($version, $extension, $extensionVersion, $downloadUrl, $autoActivate);
                     }
                 }
@@ -605,12 +605,12 @@ class PhpInstaller
 
     public function installExtensionVersion(Version $version, string $extension, Version $extensionVersion, string $downloadUrl, bool $autoActivate): void
     {
-        $extDir = "$this->baseDir/ext/php_{$extension}_{$version->formatFamilyPath()}_{$extensionVersion->format5()}";
+        $extDir = "$this->baseDir/ext/php_{$extension}_{$version->formatFamilyPath()}_{$extensionVersion->format6()}";
         if (!is_dir($extDir)) {
             $zipFile = "$this->baseDir/tmp.zip";
             $zip = $this->httpHelper->downloadZip($downloadUrl, $zipFile);
 
-            $this->console->ln()->writeLn("    Extracting to /ext/php_{$extension}_{$version->formatFamilyPath()}_{$extensionVersion->format5()}");
+            $this->console->ln()->writeLn("    Extracting to /ext/php_{$extension}_{$version->formatFamilyPath()}_{$extensionVersion->format6()}");
             $zip->extractTo($extDir);
             $zip->close();
         }
@@ -645,7 +645,7 @@ class PhpInstaller
                         continue;
                     }
 
-                    $this->console->writeLn("  " . C::white($version->format5()));
+                    $this->console->writeLn("  " . C::white($version->format6()));
 
                     if ($test) {
                         continue;
@@ -673,7 +673,7 @@ class PhpInstaller
                             continue;
                         }
                         foreach ($extVersions as $url => $extensionVersion) {
-                            $available[] = $extensionVersion->format5();
+                            $available[] = $extensionVersion->format6();
                             if ($extensionFilter->match($extensionVersion, [], ["$extensionVersion->major.$extensionVersion->minor.*-ts-32" => $extVersions])) {
                                 $selected = $extensionVersion;
                                 $downloadUrl = $url;
@@ -685,7 +685,7 @@ class PhpInstaller
                     } elseif ($selected === null) {
                         $this->console->writeLn(C::lred("    no version matched. available: " . implode(', ', $available)));
                     } else {
-                        $this->console->writeLn(C::white("    installing {$selected->format5()}"));
+                        $this->console->writeLn(C::white("    installing {$selected->format6()}"));
                         $this->uninstallExtensionVersion($version, $extension, $extensionVersion, $downloadUrl);
                     }
                 }
@@ -697,12 +697,12 @@ class PhpInstaller
     {
         $this->switchExtension($extension, $version, false);
 
-        $extDir = "$this->baseDir/ext/php_{$extension}_{$version->formatFamilyPath()}_{$extensionVersion->format5()}";
+        $extDir = "$this->baseDir/ext/php_{$extension}_{$version->formatFamilyPath()}_{$extensionVersion->format6()}";
         if (!is_dir($extDir)) {
             $zipFile = "$this->baseDir/tmp.zip";
             $zip = $this->httpHelper->downloadZip($downloadUrl, $zipFile);
 
-            $this->console->ln()->writeLn("    Extracting to /ext/php_{$extension}_{$version->formatFamilyPath()}_{$extensionVersion->format5()}");
+            $this->console->ln()->writeLn("    Extracting to /ext/php_{$extension}_{$version->formatFamilyPath()}_{$extensionVersion->format6()}");
             $zip->extractTo($extDir);
             $zip->close();
         }
@@ -733,7 +733,7 @@ class PhpInstaller
                     if (!$filter->match($version, PhpInfo::FAMILIES, $this->remote)) {
                         continue;
                     }
-                    $this->console->writeLn("  Configuring " . C::white($version->format5()));
+                    $this->console->writeLn("  Configuring " . C::white($version->format6()));
 
                     if ($test) {
                         continue;
@@ -841,7 +841,7 @@ class PhpInstaller
                     }
                     // todo: info + test
 
-                    $this->console->writeLn(C::white("  {$version->format5()}:"));
+                    $this->console->writeLn(C::white("  {$version->format6()}:"));
                     $this->switchExtension($ext, $version, false);
                 }
             }
@@ -882,7 +882,7 @@ class PhpInstaller
                 }
 
                 if ($on && !$this->extensionExists($ext . $ver, $version)) {
-                    $this->console->writeLn(C::red("Extension {$ext}{$ver} does not seem to be installed on {$version->format5()}."));
+                    $this->console->writeLn(C::red("Extension {$ext}{$ver} does not seem to be installed on {$version->format6()}."));
                 }
 
                 $inserted = true;
@@ -909,7 +909,7 @@ class PhpInstaller
         }
 
         if ($on && !$this->extensionExists($ext, $version)) {
-            $this->console->writeLn(C::red("Extension {$ext} does not seem to be installed on {$version->format5()}."));
+            $this->console->writeLn(C::red("Extension {$ext} does not seem to be installed on {$version->format6()}."));
         }
 
         Io::write($ini, implode("\n", $lines));
@@ -946,14 +946,14 @@ class PhpInstaller
     {
         // phpXY
         if (!$this->higherInstalled($version, $filter, $version->unsetPatch())) {
-            $this->console->writeLn('  Selected ' . C::white($version->format5()) . " as default for " . C::white("php{$version->major}{$version->minor}"));
+            $this->console->writeLn('  Selected ' . C::white($version->format6()) . " as default for " . C::white("php{$version->major}{$version->minor}"));
             $this->writeBinFiles($version, 2);
         }
 
         // phpX
         if (!$this->higherInstalled($version, $filter, $version->unsetMinor())) {
             if ($level === 'major' || $level === 'global') {
-                $this->console->writeLn('  Selected ' . C::white($version->format5()) . " as default for " . C::white("php{$version->major}"));
+                $this->console->writeLn('  Selected ' . C::white($version->format6()) . " as default for " . C::white("php{$version->major}"));
                 $this->writeBinFiles($version, 1);
             }
         }
@@ -961,7 +961,7 @@ class PhpInstaller
         // php
         if (!$this->higherInstalled($version, $filter)) {
             if ($level === 'global') {
-                $this->console->writeLn('  Selected ' . C::white($version->format5()) . " as default for " . C::white("php"));
+                $this->console->writeLn('  Selected ' . C::white($version->format6()) . " as default for " . C::white("php"));
                 $this->writeBinFiles($version, 0);
             }
         }
@@ -971,27 +971,27 @@ class PhpInstaller
 
     public function getVersionDirectory(Version $version): string
     {
-        return $this->baseDir . '/versions/php' . $version->format5();
+        return $this->baseDir . '/versions/php' . $version->format6();
     }
 
     public function getVersionBinaryPath(Version $version): string
     {
-        return $this->baseDir . '/versions/php' . $version->format5() . '/php.exe';
+        return $this->baseDir . '/versions/php' . $version->format6() . '/php.exe';
     }
 
     public function getVersionCgiBinaryPath(Version $version): string
     {
-        return $this->baseDir . '/versions/php' . $version->format5() . '/php-cgi.exe';
+        return $this->baseDir . '/versions/php' . $version->format6() . '/php-cgi.exe';
     }
 
     public function getVersionExtDirectory(Version $version): string
     {
-        return $this->baseDir . '/versions/php' . $version->format5() . PhpInfo::extensionDir($version);
+        return $this->baseDir . '/versions/php' . $version->format6() . PhpInfo::extensionDir($version);
     }
 
     public function getVersionIniPath(Version $version): string
     {
-        return $this->baseDir . '/versions/php' . $version->format5() . '/php.ini';
+        return $this->baseDir . '/versions/php' . $version->format6() . '/php.ini';
     }
 
     public function getConfigIniPath(Version $version): string
@@ -1027,17 +1027,17 @@ class PhpInstaller
 
     public function isAvailable(Version $version): bool
     {
-        return isset($this->remote[$version->formatFamily()][$version->format5()]);
+        return isset($this->remote[$version->formatFamily()][$version->format6()]);
     }
 
     public function higherAvailable(Version $version, ?Version $filter = null): bool
     {
         $family = $version->getFamily();
-        if (!isset($this->remote[$family->format5()])) {
+        if (!isset($this->remote[$family->format6()])) {
             return false;
         }
 
-        foreach ($this->remote[$family->format5()] as $remote) {
+        foreach ($this->remote[$family->format6()] as $remote) {
             if ($filter !== null && !$filter->match($remote)) {
                 continue;
             }
@@ -1051,7 +1051,7 @@ class PhpInstaller
 
     public function isInstalled(Version $version): bool
     {
-        return isset($this->local[$version->formatFamily()][$version->format5()]);
+        return isset($this->local[$version->formatFamily()][$version->format6()]);
     }
 
     public function getLatestInstalled(Version $family): int|string|null
@@ -1093,21 +1093,21 @@ class PhpInstaller
                 // no nts versions before 5.2 and no 64bit versions before 5.5
                 if ($major > 5 || ($major === 5 && $minor >= 5)) {
                     $family = new Version($major, $minor, null, false, 64);
-                    $this->families[$family->format5()] = $family;
+                    $this->families[$family->format6()] = $family;
                 }
                 // no 64bit versions before 5.5
                 if ($major > 5 || ($major === 5 && $minor >= 5)) {
                     $family = new Version($major, $minor, null, true, 64);
-                    $this->families[$family->format5()] = $family;
+                    $this->families[$family->format6()] = $family;
                 }
                 // no nts versions before 5.2
                 if ($major > 5 || ($major === 5 && $minor >= 2)) {
                     $family = new Version($major, $minor, null, false, 32);
-                    $this->families[$family->format5()] = $family;
+                    $this->families[$family->format6()] = $family;
                 }
                 // always available
                 $family = new Version($major, $minor, null, true, 32);
-                $this->families[$family->format5()] = $family;
+                $this->families[$family->format6()] = $family;
             }
         }
 
@@ -1135,7 +1135,7 @@ class PhpInstaller
 
         /** @var Version $version */
         foreach (Arr::sortComparable($versions) as $version) {
-            $this->local[$version->formatFamily()][$version->format5()] = $version;
+            $this->local[$version->formatFamily()][$version->format6()] = $version;
         }
     }
 
@@ -1232,10 +1232,10 @@ class PhpInstaller
 
         /** @var Version $version */
         foreach ($versions as $version) {
-            $this->remote[$version->formatFamily()][$version->format5()] = $version;
+            $this->remote[$version->formatFamily()][$version->format6()] = $version;
         }
 
-        $this->downloadUrls = Arr::remap($versions, static fn (string $url, Version $version) => [$version->format5() => $url]);
+        $this->downloadUrls = Arr::remap($versions, static fn (string $url, Version $version) => [$version->format6() => $url]);
     }
 
     /**

@@ -13,6 +13,7 @@ use function is_int;
 use function is_numeric;
 use function is_string;
 use function max;
+use function preg_match;
 use function rd;
 use function str_replace;
 
@@ -112,21 +113,27 @@ class Version implements Comparable
 
     public static function parseExpression(string|bool|float $expression, ?Version $platform = null): self
     {
+        global $argv;
+        rd($argv);
         if ($expression === true) {
             $expression = '*';
         }
         $expression = (string) $expression;
-
+rd($expression);
         if (str_contains($expression, '.')) {
             [$major, $minor, $patch] = explode('.', $expression . '.');
-            [$patch, $ts, $bits] = explode('-', $patch . '--');
+            [$patch, $ts, $bits, $build] = explode('-', $patch . '---');
+            if (Re::match($ts, '~^(pg|vc|vs)~')) {
+                $build = $ts;
+                $ts = null;
+            }
         } else {
-            $match = Re::match($expression, '~([0-9]+?|[*^_])(?:\\.?([0-9]+?|[*^_]))?(?:\\.?([0-9]+?(?:(?:alpha|beta|rc)[0-9]+)?|[*^_]))?-?(nts|ts|\\*)?-?(32|64|\\*)?$~i');
+            $match = Re::match($expression, '~([0-9]+?|[*^_])(?:\\.?([0-9]+?|[*^_]))?(?:\\.?([0-9]+?(?:(?:alpha|beta|rc)[0-9]+)?|[*^_]))?-?(nts|ts|\\*)?-?(32|64|\\*)?-?((?:pg|vc|vs)[0-9]+)?$~i');
             if (!$match) {
                 throw new RuntimeException('Invalid version expression.');
             }
-            $match = array_pad($match, 6, null);
-            [, $major, $minor, $patch, $ts, $bits] = $match;
+            $match = array_pad($match, 7, null);
+            [, $major, $minor, $patch, $ts, $bits, $build] = $match;
         }
 
         $ts = $platform !== null ? ($platform->threadSafe ? 'ts' : 'nts') : $ts;
@@ -138,6 +145,7 @@ class Version implements Comparable
             self::parsePart($patch),
             ($ts === '' || $ts === null) ? false : ($ts === '*' ? null : $ts === 'ts'),
             ($bits === '' || $bits === null) ? 64 : ($bits === '*' ? null : (int) $bits),
+            $build,
         );
     }
 
@@ -190,7 +198,7 @@ class Version implements Comparable
 
     public function equals(self $other): bool
     {
-        return $this->format5() === $other->format5();
+        return $this->format6() === $other->format6();
     }
 
     public function equals3(self $other): bool
@@ -208,7 +216,8 @@ class Version implements Comparable
             ?: is_string($other->patch) <=> is_string($this->patch) // "0RC5" < 0
             ?: $this->patch <=> $other->patch
             ?: $this->threadSafe <=> $other->threadSafe
-            ?: $other->bits <=> $this->bits;
+            ?: $other->bits <=> $this->bits
+            ?: $other->build <=> $this->build;
     }
 
     public function formatFamily(): string
@@ -228,13 +237,14 @@ class Version implements Comparable
             . ($this->bits === null ? '' : ($this->bits === 32 ? '-32' : ''));
     }
 
-    public function format5(): string
+    public function format6(): string
     {
         return self::part($this->major)
             . '.' . self::part($this->minor)
             . '.' . self::part($this->patch)
             . ($this->threadSafe === null ? '-*' : ($this->threadSafe ? '-ts' : ''))
-            . ($this->bits === null ? '-*' : ($this->bits === 32 ? '-32' : ''));
+            . ($this->bits === null ? '-*' : ($this->bits === 32 ? '-32' : ''))
+            . ($this->build === null ? '-*' : '-' . $this->build);
     }
 
     public function format3(): string
@@ -318,6 +328,10 @@ class Version implements Comparable
         }
 
         if ($this->bits !== null && $that->bits !== null && $this->bits !== $that->bits) {
+            return false;
+        }
+
+        if ($this->build !== null && $that->build !== null && $this->build !== $that->build) {
             return false;
         }
 

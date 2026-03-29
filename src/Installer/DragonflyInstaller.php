@@ -36,7 +36,6 @@ class DragonflyInstaller extends DockerInstaller
     {
         $this->releaseNotesListsUrls = [];
 
-        // no release notes for older versions, because they are archived
         if (exec('git ls-remote --tags https://github.com/dragonflydb/dragonfly.git', $output, $resultCode) !== false && $resultCode === 0) {
             foreach ($output as $row) {
                 // take only GA release versions

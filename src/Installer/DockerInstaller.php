@@ -272,7 +272,7 @@ abstract class DockerInstaller
         $this->console->writeLn(C::lcyan("Available {$this->fancyName} versions") . ' ' . C::lyellow('installed') . ' ' . C::lgreen('running'));
 
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Filtered by {$filter->format3()}:"));
+            $this->console->writeLn(C::white("Filtered by {$filter->format6()}:"));
 
             foreach ($this->families as $family => $familyVersion) {
                 if ($filter->match($familyVersion)) {
@@ -302,7 +302,7 @@ abstract class DockerInstaller
         $this->console->writeLn(C::lcyan("Local {$this->fancyName} versions") . ' - ' . C::lgreen('running') . ' (' . C::yellow('port') . ')');
 
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Filtered by {$filter->format3()}:"));
+            $this->console->writeLn(C::white("Filtered by {$filter->format6()}:"));
 
             foreach ($this->families as $name => $family) {
                 if ($filter->match($family)) {
@@ -335,7 +335,7 @@ abstract class DockerInstaller
         $this->console->writeLn(C::lcyan("New {$this->fancyName} versions") . ' - ' . C::lyellow('older') . ' ' . C::lgreen('last'));
 
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Filtered by {$filter->format3()}:"));
+            $this->console->writeLn(C::white("Filtered by {$filter->format6()}:"));
 
             $allInstalled = true;
             $allUpToDate = true;
@@ -397,7 +397,7 @@ abstract class DockerInstaller
         $this->console->writeLn(C::lcyan("Installing {$this->fancyName} versions"));
 
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Filtered by {$filter->format3()}:"));
+            $this->console->writeLn(C::white("Filtered by {$filter->format6()}:"));
 
             foreach ($this->remote as $versions) {
                 foreach ($versions as $version) {
@@ -405,10 +405,10 @@ abstract class DockerInstaller
                         continue;
                     }
                     if ($this->isInstalled($version)) {
-                        $this->console->writeLn(C::white('  ' . $version->format3()) . ' already installed');
+                        $this->console->writeLn(C::white('  ' . $this->format($version)) . ' already installed');
                         continue;
                     }
-                    $this->console->writeLn(C::white('  ' . $version->format3()));
+                    $this->console->writeLn(C::white('  ' . $this->format($version)));
 
                     $this->installVersion($version);
                 }
@@ -437,7 +437,7 @@ abstract class DockerInstaller
         $this->console->writeLn(C::lcyan("Uninstalling {$this->fancyName} versions"));
 
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Filtered by {$filter->format3()}:"));
+            $this->console->writeLn(C::white("Filtered by {$filter->format6()}:"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
@@ -478,7 +478,7 @@ abstract class DockerInstaller
         $this->console->writeLn(C::lcyan("Starting {$this->fancyName} versions"));
 
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Filtered by {$filter->format3()}:"));
+            $this->console->writeLn(C::white("Filtered by {$filter->format6()}:"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
@@ -528,7 +528,7 @@ abstract class DockerInstaller
         $this->console->writeLn(C::lcyan("Stopping {$this->fancyName} versions"));
 
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Filtered by {$filter->format3()}:"));
+            $this->console->writeLn(C::white("Filtered by {$filter->format6()}:"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
