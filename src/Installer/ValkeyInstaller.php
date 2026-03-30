@@ -34,7 +34,7 @@ class ValkeyInstaller extends DockerInstaller
         // 7.2.12 -> 47212
         // 8.4.1  -> 48401
 
-        return '4' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+        return '5' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
     }
 
     public function loadReleaseNotesListsUrls(): void

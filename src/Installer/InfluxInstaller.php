@@ -31,7 +31,7 @@ class InfluxInstaller extends DockerInstaller
     {
         // 2.7.1 -> 62071
 
-        return '6' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
+        return '6' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
     }
 
     public function loadReleaseNotesListsUrls(): void

@@ -28,9 +28,11 @@ class CassandraInstaller extends DockerInstaller
 
     public function translatePort(int $port, Version $version): int
     {
-        // 4.0.19 -> 24019
+        // 4.0.19  -> 54019
+        // 3.11.19 -> 53919
+        $minor = $version->minor === 11 ? 9 : $version->minor;
 
-        return '2' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+        return '5' . $version->major . $minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
     }
 
     public function loadReleaseNotesListsUrls(): void

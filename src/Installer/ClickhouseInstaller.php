@@ -2,13 +2,10 @@
 
 namespace Herd\Installer;
 
-use Dogma\Io\FileInfo;
-use Dogma\Re;
-use Dogma\Time\DateTime;
 use Herd\Version;
 use function end;
 use function str_pad;
-use const PREG_SET_ORDER;
+use function version_compare;
 use const STR_PAD_LEFT;
 
 class ClickhouseInstaller extends DockerInstaller
@@ -41,50 +38,20 @@ class ClickhouseInstaller extends DockerInstaller
         }
     }
 
-    /**
-     * Changelog lists versions as "year.month" with no patch component.
-     * Force patch=0 so versionKey/format3 produce clean strings (e.g. "25.1.0").
-     * @override
-     */
-    public function parseVersionsFromReleaseNotesList(string $html): array
-    {
-        $versions = [];
-        foreach (Re::matchAll($html, $this->releaseNotesRe, PREG_SET_ORDER) as $match) {
-            $v = Version::parseRelease($match[0], $this->releaseNotesRe, $this->fancyName);
-            $version = new Version($v->major, $v->minor, 0, null, null, null, $v->date, $v->type, $v->app);
-            $versions[$this->versionKey($version)] = $version;
-        }
-
-        return $versions;
-    }
-
     public function loadReleaseNotesListsUrls(): void
     {
-        $baseUrl = 'https://clickhouse.com';
-        $seedUrl = "{$baseUrl}/docs/category/changelog";
+        $this->releaseNotesListsUrls = [];
 
-        // seed with current year; category page will reveal older year pages
-        $this->releaseNotesListsUrls = [
-            '2025' => "{$baseUrl}/docs/whats-new/changelog/2025",
-        ];
-
-        $cache = new FileInfo("{$this->baseDir}/cache/{$this->dir}/changelog-category.html");
-        if ($cache->exists() && $cache->getModifiedTime()->isAfter(new DateTime('-1 day'))) {
-            $html = $cache->read();
-        } else {
-            $this->console->writeLn("Refreshing release notes ({$seedUrl})");
-
-            $request = $this->httpHelper->createHttpRequest($seedUrl);
-            $response = $request->execute();
-            rd($response);
-            $html = $response->getBody();
-            $cache->write($html);
-        }
-
-        foreach (Re::matchAll($html, '~whats-new/changelog/(\d{4})\b~i', PREG_SET_ORDER) as $match) {
-            $year = $match[1];
-            if (!isset($this->releaseNotesListsUrls[$year])) {
-                $this->releaseNotesListsUrls[$year] = "{$baseUrl}/docs/whats-new/changelog/{$year}";
+        if (exec('git ls-remote --tags https://github.com/ClickHouse/ClickHouse.git', $output, $resultCode) !== false && $resultCode === 0) {
+            foreach ($output as $row) {
+                // take only stable GA releases, e.g. refs/tags/v25.1.2.1-stable
+                if (preg_match('~refs/tags/v(\d+)\.(\d+)\.\d+\.\d+-stable$~', $row, $matches)) {
+                    $version = new Version((int) $matches[1], (int) $matches[2], 0, null, null, null, null, null, $this->fancyName);
+                    $vk = $this->versionKey($version);
+                    if (!isset($this->minVersion) || version_compare($vk, $this->minVersion) >= 0) {
+                        $this->remote[$this->familyKey($version)][$vk] = $version;
+                    }
+                }
             }
         }
     }

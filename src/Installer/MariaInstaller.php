@@ -37,8 +37,9 @@ class MariaInstaller extends DockerInstaller
 
         if ($major === 5) {
             $major = 15;
-        } elseif (strlen($major . $minor . $patch) === 6) {
-            $major = 1;
+        }
+        if ($major === 10 && $minor > 9) {
+            $major = 2;
         }
 
         return $major . $minor . str_pad($patch, 2, '0', STR_PAD_LEFT);

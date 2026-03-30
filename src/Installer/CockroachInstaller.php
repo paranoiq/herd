@@ -37,10 +37,10 @@ class CockroachInstaller extends DockerInstaller
             return $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
         } else {
             // Admin UI
-            // 26.1.0  -> 46100
-            // 25.2.13 -> 45213
+            // 26.1.0  -> 36100
+            // 25.2.13 -> 35213
 
-            return ($version->major + 2) . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+            return ($version->major + 10) . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
         }
     }
 

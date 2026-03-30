@@ -80,14 +80,14 @@ $w = static function (string $s): string {
 // embedded: H2, SQLite, DuckDB
 
 $arguments = [
-        'Resources:',
+        'Tools:',
     'php' =>            ['',  Cf::FLAG, $ch("PHP", "777bb4") . "         - the dead programming language (default, local)"],
 
     'mysql' =>          ['M', Cf::FLAG, $ch("MySQL", "00758f") . "       - OLTP SQL database"], // 3 (8.0.11 -> 38011)
-    'maria' =>          ['A', Cf::FLAG, $ch("MariaDB", "1f305f") . "     - OLTP SQL database, MySQL fork"], // 1 (10.9.8 -> 10908)
+    'maria' =>          ['A', Cf::FLAG, $ch("MariaDB", "1f305f") . "     - OLTP SQL database, MySQL fork"], // 1/2 (10.9.8 -> 10908)
     'postgre' =>        ['P', Cf::FLAG, $ch("PostgreSQL", "336791") . "  - OLTP SQL database"], // 5 (10.23 -> 51023)
     'firebird' =>       ['F', Cf::FLAG, $ch("Firebird", "f41b0a") . "    - OLTP SQL database"], // 3 (5.0.3 -> 35003)
-    'cockroach' =>      ['C', Cf::FLAG, $ch("CockroachDB", "6933ff") . " - OLTP SQL distributed database"], // 2, 4 (main 25.2.13 -> 25213, admin 5.2.13 -> 45213)
+    'cockroach' =>      ['C', Cf::FLAG, $ch("CockroachDB", "6933ff") . " - OLTP SQL distributed database"], // 2, 3 (main 25.2.13 -> 25213, admin 25.2.13 -> 35213)
 
     'clickhouse' =>     ['H', Cf::FLAG, $ch("ClickHouse", "fafe69") . "  - OLAP SQL column-oriented database"], // _, 6 (native 25.1 -> 2501, http 25.1 -> 62501)
     'druid' =>          ['D', Cf::FLAG, $ch("Druid", "3bb9c3") . "       - OLAP SQL distributed database, Apache"], // 3 (36.0.0 -> 36000)
@@ -95,7 +95,7 @@ $arguments = [
     'trino' =>          ['',  Cf::FLAG, $ch("Trino", "dd00a1") . "       - OLAP SQL distributed database, Presto fork"], // _ (479 -> 4790)
 
     'timescale' =>      ['T', Cf::FLAG, $ch("TimescaleDB", "f5ff80") . " - time-series SQL database, PostgreSQL extension"], // 1-4 (2.17.0-pg18 -> 42170)
-    'quest' =>          ['Q', Cf::FLAG, $ch("QuestDB", "a33153") . "     - time-series SQL database"], // 1, 4 (main 8.2.1 -> 58021, admin 8.2.1 -> 48021)
+    'quest' =>          ['Q', Cf::FLAG, $ch("QuestDB", "a33153") . "     - time-series SQL database"], // 1, 3 (main 8.2.1 -> 18021, admin 8.2.1 -> 38021)
     'influx' =>         ['I', Cf::FLAG, $ch("InfluxDB", "b619b6") . "    - time-series SQL/InfluxQL database"], // 6 (2.7.1 -> 62071)
 
     // Prometheus ? (metrics db)
@@ -103,7 +103,7 @@ $arguments = [
 
     'mongo' =>          ['G', Cf::FLAG, $ch("MongoDB", "00ed64") . "     - document database"], // 2 (8.0.19 -> 28019)
     'dynamo' =>         ['',  Cf::FLAG, $ch("DynamoDB", "1c5e9d") . "    - document database, Amazon"], // 2 (1.25.1 -> 21251)
-    'cassandra' =>      ['',  Cf::FLAG, $ch("Cassandra", "1287b1") . "   - column database, Apache"], // 2 (4.0.19 -> 24019)
+    'cassandra' =>      ['',  Cf::FLAG, $ch("Cassandra", "1287b1") . "   - column database, Apache"], // 5 (4.0.19 -> 54019)
     // FerretDB ? (MongoDB-like API on Postgre backend, needs docker-compose)
 
     'redis' =>          ['R', Cf::FLAG, $ch("Redis", "ff4438") . "       - key-value storage"], // 4 (8.4.1 -> 48401)
@@ -180,14 +180,14 @@ if ($config->help === true || (!$config->hasValues() && (!$config->config))) {
     $console->writeLn('   - many ', $y('PHP'), ' versions at once (Windows only, local)');
     $console->writeLn('   - many ', $y('database'), '/', $y('cache'), '/', $y('queue'), '... versions at once (dockerized)')->ln();
 
-    $console->writeLn('Usage: ' . $y('herd --resource [--options] --action versions'))->ln();
+    $console->writeLn('Usage: ' . $y('herd --tool [--options] --action expression'))->ln();
 
     $console->write($config->renderHelp());
 
     $console->writeLn('Versions expression: '
         . $y('(n|*|^|_)') . $w('.[n|*|^|_]') . $y('.[n|*|^|_]')
-        . $w('-[nts|ts|*]') . $y('-[64|32|*]'));
-    $console->writeLn('                     (major)   (minor)   (patch)   (threads)  (arch.)');
+        . $w('-[nts|ts|*]') . $y('-[64|32|*]') . $w('-[build]'));
+    $console->writeLn('                     (major)   (minor)   (patch)   (threads)  (arch.)   (tool-specific)');
     $console->writeLn($w('  n'), ' = version number');
     $console->writeLn($w('  *'), ' = any version');
     $console->writeLn($w('  ^'), ' = last version');

@@ -31,12 +31,12 @@ class QuestInstaller extends DockerInstaller
     {
         if ($port === 8812) {
             // PostgreSQL wire protocol
-            // 8.2.1 -> 58021
-            return '1' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
+            // 8.2.1 -> 18021
+            return '1' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
         } else { // 9000
             // HTTP REST API / web console
-            // 8.2.1 -> 48021
-            return '4' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
+            // 8.2.1 -> 38021
+            return '3' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
         }
     }
 

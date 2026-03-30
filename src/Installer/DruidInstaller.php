@@ -30,10 +30,15 @@ class DruidInstaller extends DockerInstaller
     public function translatePort(int $port, Version $version): int
     {
         // router / web console
-        // 36.0.0 -> 36000
-        // 35.0.1 -> 35001
+        // 36.0.0 -> 360
+        // 35.0.1 -> 351
 
-        return (int) ($version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch);
+        $minor = $version->minor;
+        if ($minor === 0) {
+            $minor = '';
+        }
+
+        return (int) ($version->major . $minor . $version->patch);
     }
 
     public function loadReleaseNotesListsUrls(): void
