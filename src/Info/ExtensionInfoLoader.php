@@ -5,7 +5,7 @@ namespace Herd;
 class ExtensionInfoLoader
 {
 
-    private const VERSIONS = [
+    private const VERSIONS = [ // @phpstan-ignore classConstant.unused (todo)
         'curl' => '~cURL Information => 7.73.0',
         'curl/ssl' => '~SSL Version => OpenSSL/1.1.1h',
         'curl/zlib' => '~ZLib Version => 1.2.11',
@@ -45,7 +45,6 @@ class ExtensionInfoLoader
         'zip' => '~Zip version => 1.19.1',
         'zip/libzip' => '~Libzip version => 1.7.1',
         'zlib' => '~Compiled Version => 1.2.11',
-
     ];
 
 }
