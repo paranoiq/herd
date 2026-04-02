@@ -2,6 +2,7 @@
 
 namespace Herd\Info;
 
+use Dogma\VersionFilter;
 use Herd\Version;
 use function in_array;
 
@@ -398,7 +399,7 @@ class PhpInfo
         }
     }
 
-    public static function extensionDllName(Version $version, string $name): string
+    public static function extensionDllName(Version|VersionFilter $version, string $name): string
     {
         if ($name === 'memcached') {
             return 'memcache';
@@ -417,7 +418,7 @@ class PhpInfo
         }
     }
 
-    public static function extensionInternalName(Version $version, string $name): string
+    public static function extensionInternalName(Version|VersionFilter $version, string $name): string
     {
         if ($name === 'memcached') {
             return 'memcache';

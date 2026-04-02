@@ -7,9 +7,11 @@ use Dogma\Application\Configurator;
 use Dogma\Application\Console;
 use Dogma\Io\FileInfo;
 use Dogma\Io\Io;
+use Dogma\Parse;
 use Dogma\Re;
 use Dogma\Time\Date;
 use Dogma\Time\DateTime;
+use Dogma\VersionFilter;
 use Herd\HttpHelper;
 use Herd\Info\PhpInfo;
 use Herd\Version;
@@ -32,9 +34,14 @@ abstract class DockerInstaller
     public string $fancyName;
     public string $dir;
     public string $minVersion; // cuts what versions are available on DockerHub (and therefore installable by default)
+    public string $versionFormat; // e.g. "M?.mm.pp" where: M = major, m = minor, p = patch, r = revision, "x!" = drop part when mapping to port number, "x?" = drop part if port number is too long
+    public string $portPrefix; // must be defined for automatic port assignment, or implement translatePort()
 
     // metadata
     public string $releaseNotesRe;
+    public string $gitTagsRe;
+    public string $gitRepoUrl;
+    /** @var array<string, string> */
     public array $releaseDates = [];
 
     // docker
@@ -43,7 +50,9 @@ abstract class DockerInstaller
     public string $volumePrefix;
     public string $volumeTarget;
     public string $runCommand = '';
+    /** @var array<int> */
     public array $ports;
+    /** @var array<string, string> */
     public array $envVars = [];
 
     public Console $console;
@@ -52,19 +61,19 @@ abstract class DockerInstaller
 
     public string $baseDir;
 
-    /** @var array<string, string> ($family => $url) */
+    /** @var array<string> */
     public array $releaseNotesListsUrls = [];
 
-    /** @var int[][] ($major => $minors) */
+    /** @var array<string, array<int>> ($major => $minors) */
     public array $familyTree = [];
 
-    /** @var Version[] ($family => $familyVersion) */
+    /** @var array<string, Version> ($family => $familyVersion) */
     public array $families = [];
 
-    /** @var Version[][] ($family => $versionString => $versionObject) */
+    /** @var array<string, array<string, Version>> ($family => $versionString => $versionObject) */
     public array $remote = [];
 
-    /** @var Version[][] ($family => $versionString => $versionObject) */
+    /** @var array<string, array<string, Version>> ($family => $versionString => $versionObject) */
     public array $local = [];
 
     /** @var array<string, bool> ($versionString => $running) */
@@ -97,19 +106,19 @@ abstract class DockerInstaller
         $this->loadRunningVersions();
 
         if ($config->all) {
-            $this->listRemote(Version::filter($config->all));
+            $this->listRemote(VersionFilter::parse($config->all));
         } elseif ($config->local) {
-            $this->listLocal(Version::filter($config->local));
+            $this->listLocal(VersionFilter::parse($config->local));
         } elseif ($config->new) {
-            $this->listNew(Version::filter($config->new));
+            $this->listNew(VersionFilter::parse($config->new));
         } elseif ($config->install) {
-            $this->install(Version::filter($config->install, '**^'));
+            $this->install(VersionFilter::parse($config->install, '**^'));
         } elseif ($config->uninstall) {
-            $this->uninstall(Version::filter($config->uninstall, '**_'), (bool) $config->test);
+            $this->uninstall(VersionFilter::parse($config->uninstall, '**_'), (bool) $config->test);
         } elseif ($config->start) {
-            $this->start(Version::filter($config->start, '^^^'), (bool) $config->test);
+            $this->start(VersionFilter::parse($config->start, '^^^'), (bool) $config->test);
         } elseif ($config->stop) {
-            $this->stop(Version::filter($config->stop, '^^^'), (bool) $config->test);
+            $this->stop(VersionFilter::parse($config->stop, '^^^'), (bool) $config->test);
         } elseif ($config->configure) {
             $this->console->writeLn(C::lred("Configure is not implemented for {$this->fancyName}"));
         } elseif ($config->default) {
@@ -149,21 +158,57 @@ abstract class DockerInstaller
         return $version->format3t();
     }
 
-    abstract public function loadReleaseNotesListsUrls();
+    public function loadReleaseNotesListsUrls(): void
+    {
+        $this->releaseNotesListsUrls = [];
+    }
 
     /**
      * @override
      * @return array<string, Version>
      */
-    public function parseVersionsFromReleaseNotesList(string $html): array
+    public function parseVersionsFromReleaseNotesList(?string $html = null): array
     {
         $versions = [];
-        foreach (Re::matchAll($html, $this->releaseNotesRe, PREG_SET_ORDER) as $match) {
-            $version = Version::parseRelease($match[0], $this->releaseNotesRe, $this->fancyName);
-            if ($version->date === null && isset($this->releaseDates[$this->versionKey($version)])) {
-                $version->date = new Date($this->releaseDates[$this->versionKey($version)]);
+        if ($html !== null && isset($this->releaseNotesRe)) {
+            foreach (Re::matchAll($html, $this->releaseNotesRe, PREG_SET_ORDER) as $m) {
+                $version = Version::parseRelease($m[0], $this->releaseNotesRe, $this->fancyName);
+                if ($version === null) {
+                    continue;
+                }
+                $vk = $this->versionKey($version);
+                if ($version->date === null && isset($this->releaseDates[$vk])) {
+                    $version->date = new Date($this->releaseDates[$vk]);
+                }
+                $versions[$vk] = $version;
             }
-            $versions[$this->versionKey($version)] = $version;
+        }
+
+        return $versions;
+    }
+
+    /**
+     * @override
+     * @return array<string, Version>
+     */
+    public function parseVersionsFromGit(): array
+    {
+        if (!isset($this->gitTagsRe) || !isset($this->gitRepoUrl)) {
+            return [];
+        }
+        if (exec("git ls-remote --tags {$this->gitRepoUrl}", $output, $resultCode) === false || $resultCode !== 0) {
+            return [];
+        }
+
+        $versions = [];
+        foreach ($output as $row) {
+            $version = Version::parseRelease($row, $this->gitTagsRe, $this->fancyName);
+            if ($version === null) {
+                continue;
+            }
+            if (!isset($this->minVersion) || version_compare($this->versionKey($version), $this->minVersion) >= 0) {
+                $this->remote[$this->familyKey($version)][$this->versionKey($version)] = $version;
+            }
         }
 
         return $versions;
@@ -206,15 +251,13 @@ abstract class DockerInstaller
 
         foreach ($this->remote as $fam => $versions) {
             $v = end($versions);
-            $vp = explode('.', $this->familyKey($v));
-            $vp[] = null;
-            $vp[] = null;
-            $this->families[$fam] = new Version(...$vp);
+            $vp = Parse::intsOrNulls($this->familyKey($v) . '..', '.');
+            $this->families[$fam] = Version::new3(...$vp);
         }
 
         foreach ($this->families as $fam => $x) {
-            [$major, $minor] = explode('.', $fam . '.');
-            $this->familyTree[(int) $major][] = (int) $minor;
+            [$major, $minor] = Parse::intsOrNulls($fam . '.', '.');
+            $this->familyTree[$major][] = $minor;
         }
     }
 
@@ -258,7 +301,8 @@ abstract class DockerInstaller
                 $this->running[$ver] = false;
             }
             foreach ($output as $line) {
-                if ($match = Re::match($line, "~{$this->containerPrefix}(\d+\.\d+\.\d+)~")) {
+                $match = Re::match($line, "~{$this->containerPrefix}(\d+\.\d+\.\d+)~");
+                if ($match !== null) {
                     $this->running[$match[1]] = true;
                 }
             }
@@ -267,12 +311,15 @@ abstract class DockerInstaller
 
     // list ------------------------------------------------------------------------------------------------------------
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     private function listRemote(array $filters): void
     {
         $this->console->writeLn(C::lcyan("Available {$this->fancyName} versions") . ' ' . C::lyellow('installed') . ' ' . C::lgreen('running'));
 
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Filtered by {$filter->format6()}:"));
+            $this->console->writeLn(C::white("Filtered by {$filter->format()}:"));
 
             foreach ($this->families as $family => $familyVersion) {
                 if ($filter->match($familyVersion)) {
@@ -297,12 +344,15 @@ abstract class DockerInstaller
         }
     }
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     private function listLocal(array $filters): void
     {
         $this->console->writeLn(C::lcyan("Local {$this->fancyName} versions") . ' - ' . C::lgreen('running') . ' (' . C::yellow('port') . ')');
 
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Filtered by {$filter->format6()}:"));
+            $this->console->writeLn(C::white("Filtered by {$filter->format()}:"));
 
             foreach ($this->families as $name => $family) {
                 if ($filter->match($family)) {
@@ -330,12 +380,15 @@ abstract class DockerInstaller
         }
     }
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     private function listNew(array $filters): void
     {
         $this->console->writeLn(C::lcyan("New {$this->fancyName} versions") . ' - ' . C::lyellow('older') . ' ' . C::lgreen('last'));
 
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Filtered by {$filter->format6()}:"));
+            $this->console->writeLn(C::white("Filtered by {$filter->format()}:"));
 
             $allInstalled = true;
             $allUpToDate = true;
@@ -368,7 +421,7 @@ abstract class DockerInstaller
 
                 if ($latest === null) {
                     $this->console->writeLn('    latest:    ' . C::lred('unknown'));
-                } elseif ($versions === [] || $version->patch !== $latest) {
+                } elseif ($versions === [] || (isset($version) && $version->patch !== $latest)) {
                     $rv = $this->remote[$this->familyKey($lv)][$this->versionKey($lv)];
                     $date = $rv->date !== null ? ' ' . C::gray($rv->date->format('(Y-m-d)')) : '';
 
@@ -379,7 +432,6 @@ abstract class DockerInstaller
             }
             if (!$allInstalled) {
                 $this->console->ln()->writeLn('Some versions are not installed.');
-                exit(2);
             } elseif (!$allUpToDate) {
                 $this->console->ln()->writeLn('Some versions are not up to date.');
                 exit(1);
@@ -390,14 +442,14 @@ abstract class DockerInstaller
     // install/uninstall -----------------------------------------------------------------------------------------------
 
     /**
-     * @param Version[] $filters
+     * @param array<VersionFilter> $filters
      */
     public function install(array $filters): void
     {
         $this->console->writeLn(C::lcyan("Installing {$this->fancyName} versions"));
 
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Filtered by {$filter->format6()}:"));
+            $this->console->writeLn(C::white("Filtered by {$filter->format()}:"));
 
             foreach ($this->remote as $versions) {
                 foreach ($versions as $version) {
@@ -430,14 +482,14 @@ abstract class DockerInstaller
     }
 
     /**
-     * @param Version[] $filters
+     * @param array<VersionFilter> $filters
      */
     public function uninstall(array $filters, bool $test): void
     {
         $this->console->writeLn(C::lcyan("Uninstalling {$this->fancyName} versions"));
 
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Filtered by {$filter->format6()}:"));
+            $this->console->writeLn(C::white("Filtered by {$filter->format()}:"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
@@ -473,12 +525,15 @@ abstract class DockerInstaller
         }
     }
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     public function start(array $filters, bool $test): void
     {
         $this->console->writeLn(C::lcyan("Starting {$this->fancyName} versions"));
 
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Filtered by {$filter->format6()}:"));
+            $this->console->writeLn(C::white("Filtered by {$filter->format()}:"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
@@ -523,12 +578,15 @@ abstract class DockerInstaller
         }
     }
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     public function stop(array $filters, bool $test): void
     {
         $this->console->writeLn(C::lcyan("Stopping {$this->fancyName} versions"));
 
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Filtered by {$filter->format6()}:"));
+            $this->console->writeLn(C::white("Filtered by {$filter->format()}:"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {

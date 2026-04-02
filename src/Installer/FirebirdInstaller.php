@@ -6,8 +6,10 @@ use Dogma\Io\FileInfo;
 use Dogma\Re;
 use Dogma\Time\DateTime;
 use Herd\Version;
+use function intval;
 use function str_pad;
 use function str_replace;
+use function strval;
 use const PREG_SET_ORDER;
 use const STR_PAD_LEFT;
 
@@ -18,6 +20,8 @@ class FirebirdInstaller extends DockerInstaller
     public string $fancyName = 'Firebird';
     public string $dir = 'firebird';
     public string $minVersion = '3.0.0';
+    public string $versionFormat = 'M.m.pp';
+    public string $portPrefix = '3';
 
     // metadata
     public string $releaseNotesRe = '~(?:Firebird|Sub-release) (?:V\.)?(?P<version>\d+.\d+.\d+)~i';
@@ -27,7 +31,9 @@ class FirebirdInstaller extends DockerInstaller
     public string $containerPrefix = 'firebird-';
     public string $volumePrefix = 'firebird-data-';
     public string $volumeTarget = '/var/lib/firebird/data';
+    /** @var array<int> */
     public array $ports = [3050];
+    /** @var array<string, string> */
     public array $envVars = ['FIREBIRD_PASSWORD' => 'root']; // admin user "SYSDBA", default password is "masterkey"
 
     public function translatePort(int $port, Version $version): int
@@ -35,7 +41,7 @@ class FirebirdInstaller extends DockerInstaller
         // 5.0.3  -> 35003
         // 3.0.13 -> 33013
 
-        return '3' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+        return intval('3' . $version->major . $version->minor . str_pad(strval($version->patch), 2, '0', STR_PAD_LEFT));
     }
 
     public function loadReleaseNotesListsUrls(): void

@@ -3,9 +3,9 @@
 namespace Herd\Installer;
 
 use Herd\Version;
-use function explode;
+use function intval;
 use function str_pad;
-use function version_compare;
+use function strval;
 use const STR_PAD_LEFT;
 
 class InfluxInstaller extends DockerInstaller
@@ -15,41 +15,29 @@ class InfluxInstaller extends DockerInstaller
     public string $fancyName = 'InfluxDB';
     public string $dir = 'influx';
     public string $minVersion = '2.0.0';
+    public string $versionFormat = 'M.m.pp';
+    public string $portPrefix = '6';
 
     // metadata
-    public string $releaseNotesRe = '~match-nothing~';
+    public string $releaseNotesRe;
+    public string $gitTagsRe = '~refs/tags/v(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$~';
+    public string $gitRepoUrl = 'https://github.com/influxdata/influxdb.git';
 
     // docker
     public string $image = 'influxdb';
     public string $containerPrefix = 'influx-';
     public string $volumePrefix = 'influx-data-';
     public string $volumeTarget = '/var/lib/influxdb2';
+    /** @var array<int> */
     public array $ports = [8086];
+    /** @var array<string, string> */
     public array $envVars = [];
 
     public function translatePort(int $port, Version $version): int
     {
-        // 2.7.1 -> 62071
+        // 2.7.12 -> 62712
 
-        return '6' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
-    }
-
-    public function loadReleaseNotesListsUrls(): void
-    {
-        $this->releaseNotesListsUrls = [];
-
-        if (exec('git ls-remote --tags https://github.com/influxdata/influxdb.git', $output, $resultCode) !== false && $resultCode === 0) {
-            foreach ($output as $row) {
-                // take only GA release versions (e.g. v2.7.1, no rc/alpha/beta)
-                if (preg_match('~refs/tags/v(\d+\.\d+\.\d+)$~', $row, $matches)) {
-                    [$major, $minor, $patch] = explode('.', $matches[1]);
-                    $version = new Version((int) $major, (int) $minor, (int) $patch, null, null, null, null, null, $this->fancyName);
-                    if (!isset($this->minVersion) || version_compare($this->versionKey($version), $this->minVersion) >= 0) {
-                        $this->remote[$this->familyKey($version)][$this->versionKey($version)] = $version;
-                    }
-                }
-            }
-        }
+        return intval('6' . $version->major . $version->minor . str_pad(strval($version->patch), 2, '0', STR_PAD_LEFT));
     }
 
     /** @override */

@@ -1,8 +1,6 @@
 <?php
 
-namespace Herd;
-
-use Herd\App\Action;
+namespace Herd\App;
 
 class Input
 {

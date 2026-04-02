@@ -3,9 +3,9 @@
 namespace Herd\Installer;
 
 use Herd\Version;
-use function explode;
+use function intval;
 use function str_pad;
-use function version_compare;
+use function strval;
 use const STR_PAD_LEFT;
 
 class QuestInstaller extends DockerInstaller
@@ -15,46 +15,34 @@ class QuestInstaller extends DockerInstaller
     public string $fancyName = 'QuestDB';
     public string $dir = 'quest';
     public string $minVersion = '6.0.0';
+    public string $versionFormat = 'M.m.pp';
+    public string $portPrefix;
 
     // metadata
-    public string $releaseNotesRe = '~match-nothing~';
+    public string $releaseNotesRe;
+    public string $gitTagsRe = '~refs/tags/(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$~';
+    public string $gitRepoUrl = 'https://github.com/questdb/questdb.git';
 
     // docker
     public string $image = 'questdb/questdb';
     public string $containerPrefix = 'quest-';
     public string $volumePrefix = 'quest-data-';
     public string $volumeTarget = '/root/.questdb';
-    public array $ports = [8812, 9000]; // PostgreSQL wire, HTTP REST / web console
+    /** @var array<int> */
+    public array $ports = [8812, 'http' => 9000]; // PostgreSQL wire, HTTP REST / web console
+    /** @var array<string, string> */
     public array $envVars = [];
 
     public function translatePort(int $port, Version $version): int
     {
         if ($port === 8812) {
             // PostgreSQL wire protocol
-            // 8.2.1 -> 18021
-            return '1' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+            // 8.2.1 -> 18201
+            return intval('1' . $version->major . $version->minor . str_pad(strval($version->patch), 2, '0', STR_PAD_LEFT));
         } else { // 9000
             // HTTP REST API / web console
-            // 8.2.1 -> 38021
-            return '3' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
-        }
-    }
-
-    public function loadReleaseNotesListsUrls(): void
-    {
-        $this->releaseNotesListsUrls = [];
-
-        if (exec('git ls-remote --tags https://github.com/questdb/questdb.git', $output, $resultCode) !== false && $resultCode === 0) {
-            foreach ($output as $row) {
-                // take only GA release versions (e.g. 8.2.1, no rc/alpha/beta)
-                if (preg_match('~refs/tags/(\d+\.\d+\.\d+)$~', $row, $matches)) {
-                    [$major, $minor, $patch] = explode('.', $matches[1]);
-                    $version = new Version((int) $major, (int) $minor, (int) $patch, null, null, null, null, null, $this->fancyName);
-                    if (!isset($this->minVersion) || version_compare($this->versionKey($version), $this->minVersion) >= 0) {
-                        $this->remote[$this->familyKey($version)][$this->versionKey($version)] = $version;
-                    }
-                }
-            }
+            // 8.2.1 -> 38201
+            return intval('3' . $version->major . $version->minor . str_pad(strval($version->patch), 2, '0', STR_PAD_LEFT));
         }
     }
 

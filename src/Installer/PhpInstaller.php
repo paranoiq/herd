@@ -13,6 +13,7 @@ use Dogma\Io\Io;
 use Dogma\Re;
 use Dogma\Str;
 use Dogma\Time\DateTime;
+use Dogma\VersionFilter;
 use Herd\HttpHelper;
 use Herd\Info\PhpInfo;
 use Herd\Version;
@@ -25,6 +26,7 @@ use function explode;
 use function file_exists;
 use function implode;
 use function in_array;
+use function intval;
 use function iterator_to_array;
 use function preg_match;
 use function strtolower;
@@ -39,13 +41,13 @@ class PhpInstaller
 
     private string $baseDir;
 
-    /** @var Version[] $families */
+    /** @var array<string, Version> $families */
     public array $families = [];
 
-    /** @var Version[][] ($family => $versionString => $versionObject) */
+    /** @var array<string, array<string, Version>> ($family => $versionString => $versionObject) */
     public array $local = [];
 
-    /** @var Version[][] ($family => $versionString => $versionObject) */
+    /** @var array<string, array<string, Version>> ($family => $versionString => $versionObject) */
     public array $remote = [];
 
     /** @var array<string, string> ($version => $url) */
@@ -54,7 +56,7 @@ class PhpInstaller
     /** @var array<string, Version> ($alias => $version) */
     public array $selected = [];
 
-    /** @var array<string, int> ($extension => $downloads) */
+    /** @var array<string, array{string, int}> ($extension => [$url, $downloads]) */
     public array $extensions = [];
 
     /** @var array<string, array<string, array<string, Version>>> ($name => $majorMinor => $url => $version) */
@@ -81,8 +83,8 @@ class PhpInstaller
             $this->loadPeclExtensionsList();
             $this->loadCachedExtensionVersions();
             [$ext, $f] = explode(':', $config->extension . ':');
-            //$ext = $config->extension === true ? true : $ext;
-            $extFilter = Version::parseExpression($f ?: ($config->uninstall ? '**_' : '**^'));
+            // default: install last version of all branches / uninstall all old versions of all branches
+            $extFilter = VersionFilter::parseExpression($f ?: ($config->uninstall ? '**_' : '**^'));
 
             if (!$config->local && !$config->all && !$config->new
                 && !$config->install && !$config->uninstall
@@ -92,47 +94,47 @@ class PhpInstaller
                 return;
             }
             if ($config->local) {
-                $this->listLocalExtensions($ext, Version::filter($config->local));
+                $this->listLocalExtensions($ext, VersionFilter::parse($config->local));
             } elseif ($config->on) {
-                $this->extensionOn($ext, Version::filter($config->on));
+                $this->extensionOn($ext, VersionFilter::parse($config->on));
             } elseif ($config->off) {
-                $this->extensionOff($ext, Version::filter($config->off));
+                $this->extensionOff($ext, VersionFilter::parse($config->off));
             } elseif ($config->uninstall) {
-                $this->uninstallExtension($ext, $extFilter, Version::filter($config->uninstall), $config->test);
+                $this->uninstallExtension($ext, $extFilter, VersionFilter::parse($config->uninstall), $config->test);
             } else {
-                $this->loadRemoteExtensions([$ext]);
+                $this->loadRemoteExtensions([$ext]); // @phpstan-ignore argument.type (TODO: WTF?)
                 if ($config->all) {
-                    $this->listRemoteExtensions($ext, Version::filter($config->all));
+                    $this->listRemoteExtensions($ext, VersionFilter::parse($config->all));
                 } elseif ($config->new) {
-                    $this->listNewExtensions($ext, Version::filter($config->new));
+                    $this->listNewExtensions($ext, VersionFilter::parse($config->new));
                 } elseif ($config->install) {
-                    $this->installExtension($ext, $extFilter, Version::filter($config->install), !$config->noAutoActivate, $config->test);
+                    $this->installExtension($ext, $extFilter, VersionFilter::parse($config->install), !$config->noAutoActivate, $config->test);
                 } elseif ($config->info) {
-                    $this->infoExtension($ext, Version::filter($config->info));
+                    $this->infoExtension($ext, VersionFilter::parse($config->info));
                 }
             }
         } elseif ($config->local) {
-            $this->listLocal(Version::filter($config->local));
+            $this->listLocal(VersionFilter::parse($config->local));
         } elseif ($config->configure) {
-            $this->configure(Version::filter($config->configure), $config->test);
+            $this->configure(VersionFilter::parse($config->configure), $config->test);
         } elseif ($config->default) {
             [$select, $level] = explode(':', $config->default . ':');
             $level = $level ?: 'global';
             Check::enum($level, 'global', 'major', 'minor');
-            $this->select(Version::filter($select), $level);
+            $this->select(VersionFilter::parse($select), $level);
         } elseif ($config->uninstall) {
-            $this->uninstall(Version::filter($config->uninstall, '**_'), $config->test);
+            $this->uninstall(VersionFilter::parse($config->uninstall, '**_'), $config->test);
         } elseif ($config->info) {
-            $this->info(Version::filter($config->info));
+            $this->info(VersionFilter::parse($config->info));
         } else {
             $this->loadRemoteVersions();
 
             if ($config->all) {
-                $this->listRemote(Version::filter($config->all));
+                $this->listRemote(VersionFilter::parse($config->all));
             } elseif ($config->new) {
-                $this->listNew(Version::filter($config->new));
+                $this->listNew(VersionFilter::parse($config->new));
             } elseif ($config->install) {
-                $this->install(Version::filter($config->install, '**^'), !$config->noAutoSelect, $config->test);
+                $this->install(VersionFilter::parse($config->install, '**^'), !$config->noAutoSelect, $config->test);
             }
         }
     }
@@ -158,10 +160,13 @@ class PhpInstaller
 
     // list ------------------------------------------------------------------------------------------------------------
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     private function listLocal(array $filters): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Local versions ({$filter->format5()}):"));
+            $this->console->writeLn(C::white("Local versions ({$filter->format()}):"));
 
             foreach ($this->families as $name => $family) {
                 if ($filter->match($family)) {
@@ -202,13 +207,16 @@ class PhpInstaller
             }
         }
 
-        return $aliases ? " as " . implode(', ', $aliases) : '';
+        return $aliases !== [] ? " as " . implode(', ', $aliases) : '';
     }
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     private function listRemote(array $filters): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Remote versions ({$filter->format5()}):"));
+            $this->console->writeLn(C::white("Remote versions ({$filter->format()}):"));
 
             foreach ($this->families as $family => $familyVersion) {
                 if ($filter->match($familyVersion)) {
@@ -230,10 +238,13 @@ class PhpInstaller
         }
     }
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     private function listNew(array $filters): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("New versions ({$filter->format5()}):"));
+            $this->console->writeLn(C::white("New versions ({$filter->format()}):"));
 
             $allInstalled = true;
             $allUpToDate = true;
@@ -262,7 +273,7 @@ class PhpInstaller
 
                 if ($latest === null) {
                     $this->console->writeLn('    latest:    ' . C::lyellow('-unknown-'));
-                } elseif ($versions === [] || $version->patch !== $latest) {
+                } elseif ($versions === [] || (isset($version) && $version->patch !== $latest)) {
                     $this->console->writeLn('    latest:    ' . C::white($familyVersion->setPatch($latest)->format6()));
                 }
                 $allInstalled = $allInstalled && $versions !== [];
@@ -278,10 +289,13 @@ class PhpInstaller
         }
     }
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     private function info(array $filters): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Info ({$filter->format5()}):"));
+            $this->console->writeLn(C::white("Info ({$filter->format()}):"));
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
                     if (!$filter->match($version)) {
@@ -317,10 +331,10 @@ class PhpInstaller
             if (isset($this->remoteExtensions[$name])) {
                 $maxKey = max(array_keys($this->remoteExtensions[$name]));
                 $lastVer = end($this->remoteExtensions[$name][$maxKey]);
-                $last = C::white(Str::before($maxKey, '.*')) . '-' . $lastVer->format5();
+                $last = C::white(Str::before($maxKey, '.*')) . '-' . $lastVer->format6();
                 $minKey = min(array_keys($this->remoteExtensions[$name]));
                 $firstVer = reset($this->remoteExtensions[$name][$minKey]);
-                $first = C::white(Str::before($minKey, '.*')) . '-' . $firstVer->format5();
+                $first = C::white(Str::before($minKey, '.*')) . '-' . $firstVer->format6();
             } else {
                 $last = '?';
                 $first = '?';
@@ -331,6 +345,9 @@ class PhpInstaller
         }
     }
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     private function listLocalExtensions(string $ext, array $filters): void
     {
         foreach ($filters as $version) {
@@ -340,10 +357,13 @@ class PhpInstaller
         }
     }
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     private function listRemoteExtensions(string $extension, array $filters): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Remote versions of ") . C::lyellow($extension) . C::white(" extension for ({$filter->format5()}):"));
+            $this->console->writeLn(C::white("Remote versions of ") . C::lyellow($extension) . C::white(" extension for ({$filter->format()}):"));
 
             foreach ($this->remoteExtensions[$extension] as $family => $versions) {
                 $familyVersion = Version::parseExpression($family);
@@ -360,17 +380,23 @@ class PhpInstaller
         }
     }
 
-    private function listNewExtensions(string $extension, array $filters): void
+    /**
+     * @param array<VersionFilter> $filters
+     */
+    private function listNewExtensions(string $extension, array $filters): void // @phpstan-ignore void.pure (todo)
     {
         foreach ($filters as $filter) {
             // todo
         }
     }
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     private function infoExtension(string $extension, array $filters): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Extension info ({$filter->format5()}):"));
+            $this->console->writeLn(C::white("Extension info ({$filter->format()}):"));
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
                     if (!$filter->match($version)) {
@@ -423,7 +449,7 @@ class PhpInstaller
         $this->console->write($output);
 
         $available = $this->remoteExtensions[$extension][$version->major . '.' . $version->minor . '.*'] ?? [];
-        if ($available) {
+        if ($available !== []) {
             $this->console->write(C::lgray(' - available: '));
             foreach ($available as $av) {
                 $this->console->write($av->format6() . ', ');
@@ -438,12 +464,12 @@ class PhpInstaller
     // install/uninstall -----------------------------------------------------------------------------------------------
 
     /**
-     * @param Version[] $filters
+     * @param array<VersionFilter> $filters
      */
     public function install(array $filters, bool $autoSelect, bool $test): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Installing ({$filter->format6()}):"));
+            $this->console->writeLn(C::white("Installing ({$filter->format()}):"));
 
             foreach ($this->remote as $versions) {
                 foreach ($versions as $version) {
@@ -509,12 +535,12 @@ class PhpInstaller
     }
 
     /**
-     * @param Version[] $filters
+     * @param array<VersionFilter> $filters
      */
     public function uninstall(array $filters, bool $test): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Uninstalling ({$filter->format6()}):"));
+            $this->console->writeLn(C::white("Uninstalling ({$filter->format()}):"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
@@ -542,10 +568,13 @@ class PhpInstaller
         }
     }
 
-    public function installExtension(string $extension, Version $extensionFilter, array $filters, bool $autoActivate, bool $test): void
+    /**
+     * @param array<VersionFilter> $filters
+     */
+    public function installExtension(string $extension, VersionFilter $extensionFilter, array $filters, bool $autoActivate, bool $test): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Installing extension $extension {$extensionFilter->format6()} on {$filter->format5()}:"));
+            $this->console->writeLn(C::white("Installing extension $extension {$extensionFilter->format()} on {$filter->format()}:"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
@@ -594,7 +623,7 @@ class PhpInstaller
                         $this->console->writeLn(C::lred("    not available"));
                     } elseif ($selected === null) {
                         $this->console->writeLn(C::lred("    no version matched. available: " . implode(', ', $available)));
-                    } else {
+                    } elseif (isset($extensionVersion)) {
                         $this->console->writeLn(C::white("    installing {$selected->format6()}"));
                         $this->installExtensionVersion($version, $extension, $extensionVersion, $downloadUrl, $autoActivate);
                     }
@@ -626,7 +655,7 @@ class PhpInstaller
     {
         foreach (Io::scanDirectory($extensionDir, Io::RECURSIVE) as $file) {
             $name = $file->getName();
-            if (in_array($name, PhpInfo::IGNORED_EXTENSION_FILES, true) || Re::match($name, PhpInfo::IGNORED_EXTENSION_FILE_TYPES)) {
+            if (in_array($name, PhpInfo::IGNORED_EXTENSION_FILES, true) || Re::match($name, PhpInfo::IGNORED_EXTENSION_FILE_TYPES) !== null) {
                 continue;
             }
             Io::unlink($targetDir . '/' . $name, Io::IGNORE);
@@ -634,10 +663,13 @@ class PhpInstaller
         }
     }
 
-    public function uninstallExtension(string $extension, Version $extensionFilter, array $filters, bool $test): void
+    /**
+     * @param array<VersionFilter> $filters
+     */
+    public function uninstallExtension(string $extension, VersionFilter $extensionFilter, array $filters, bool $test): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Installing extension {$extension} on {$filter->format5()}:"));
+            $this->console->writeLn(C::white("Installing extension {$extension} on {$filter->format()}:"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
@@ -668,7 +700,7 @@ class PhpInstaller
                     $selected = null;
                     $downloadUrl = null;
                     foreach ($this->remoteExtensions[$extension] as $for => $extVersions) {
-                        $for = Version::parseExpression($for);
+                        $for = VersionFilter::parseExpression($for);
                         if (!$for->match($version)) {
                             continue;
                         }
@@ -684,7 +716,7 @@ class PhpInstaller
                         $this->console->writeLn(C::lred("    not available"));
                     } elseif ($selected === null) {
                         $this->console->writeLn(C::lred("    no version matched. available: " . implode(', ', $available)));
-                    } else {
+                    } elseif (isset($extensionVersion)) {
                         $this->console->writeLn(C::white("    installing {$selected->format6()}"));
                         $this->uninstallExtensionVersion($version, $extension, $extensionVersion, $downloadUrl);
                     }
@@ -714,7 +746,7 @@ class PhpInstaller
     {
         foreach (Io::scanDirectory($extensionDir, Io::RECURSIVE) as $file) {
             $name = $file->getName();
-            if (in_array($name, PhpInfo::IGNORED_EXTENSION_FILES, true) || Re::match($name, PhpInfo::IGNORED_EXTENSION_FILE_TYPES)) {
+            if (in_array($name, PhpInfo::IGNORED_EXTENSION_FILES, true) || Re::match($name, PhpInfo::IGNORED_EXTENSION_FILE_TYPES) !== null) {
                 continue;
             }
             Io::unlink( $targetDir . '/' . $name, Io::IGNORE);
@@ -723,10 +755,13 @@ class PhpInstaller
 
     // configuring -----------------------------------------------------------------------------------------------------
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     public function configure(array $filters, bool $test): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Configuring ({$filter->format5()}):"));
+            $this->console->writeLn(C::white("Configuring ({$filter->format()}):"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
@@ -811,10 +846,13 @@ class PhpInstaller
         Io::delete($binPath . '-cgi.bat');
     }
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     public function extensionOn(string $ext, array $filters): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Turn extension {$ext} ON ({$filter->format5()}):"));
+            $this->console->writeLn(C::white("Turn extension {$ext} ON ({$filter->format()}):"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
@@ -829,10 +867,13 @@ class PhpInstaller
         }
     }
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     public function extensionOff(string $ext, array $filters): void
     {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Turn extension {$ext} OFF ({$filter->format5()}):"));
+            $this->console->writeLn(C::white("Turn extension {$ext} OFF ({$filter->format()}):"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
@@ -926,10 +967,13 @@ class PhpInstaller
 
     // switching versions ----------------------------------------------------------------------------------------------
 
+    /**
+     * @param array<VersionFilter> $filters
+     */
     public function select(array $filters, string $level): void
-    {rl(1);
+    {
         foreach ($filters as $filter) {
-            $this->console->writeLn(C::white("Selecting as default ({$filter->format5()}):"));
+            $this->console->writeLn(C::white("Selecting as default ({$filter->format()}):"));
 
             foreach ($this->local as $versions) {
                 foreach ($versions as $version) {
@@ -942,16 +986,20 @@ class PhpInstaller
         }
     }
 
-    public function selectVersion(Version $version, Version $filter, string $level): void
+    public function selectVersion(Version $version, VersionFilter $filter, string $level): void
     {
         // phpXY
-        if (!$this->higherInstalled($version, $filter, $version->unsetPatch())) {
+        $ff = clone $filter;
+        unset($filter->patch);
+        if (!$this->higherInstalled($version, $filter, $ff)) {
             $this->console->writeLn('  Selected ' . C::white($version->format6()) . " as default for " . C::white("php{$version->major}{$version->minor}"));
             $this->writeBinFiles($version, 2);
         }
 
         // phpX
-        if (!$this->higherInstalled($version, $filter, $version->unsetMinor())) {
+        $f = clone $filter;
+        unset($filter->minor, $filter->patch);
+        if (!$this->higherInstalled($version, $filter, $f)) {
             if ($level === 'major' || $level === 'global') {
                 $this->console->writeLn('  Selected ' . C::white($version->format6()) . " as default for " . C::white("php{$version->major}"));
                 $this->writeBinFiles($version, 1);
@@ -976,12 +1024,12 @@ class PhpInstaller
 
     public function getVersionBinaryPath(Version $version): string
     {
-        return $this->baseDir . '/versions/php' . $version->format6() . '/php.exe';
+        return $this->baseDir . '/versions/php' . $version->format3() . '/php.exe';
     }
 
     public function getVersionCgiBinaryPath(Version $version): string
     {
-        return $this->baseDir . '/versions/php' . $version->format6() . '/php-cgi.exe';
+        return $this->baseDir . '/versions/php' . $version->format3() . '/php-cgi.exe';
     }
 
     public function getVersionExtDirectory(Version $version): string
@@ -1012,7 +1060,7 @@ class PhpInstaller
         } elseif ($level === 4) {
             return $this->baseDir . "/bin/php{$version->major}{$version->minor}{$version->patch}" . ($version->threadSafe === true ? "ts" : "");
         } elseif ($level === 5) {
-            return $this->baseDir . "/bin/php{$version->major}{$version->minor}{$version->patch}" . ($version->threadSafe === true ? "ts" : "") . $version->bits;
+            return $this->baseDir . "/bin/php{$version->major}{$version->minor}{$version->patch}" . ($version->threadSafe === true ? "ts" : "") . $version->platform;
         } else {
             throw new RuntimeException("Max level is 5.");
         }
@@ -1030,7 +1078,7 @@ class PhpInstaller
         return isset($this->remote[$version->formatFamily()][$version->format6()]);
     }
 
-    public function higherAvailable(Version $version, ?Version $filter = null): bool
+    public function higherAvailable(Version $version, ?VersionFilter $filter = null): bool
     {
         $family = $version->getFamily();
         if (!isset($this->remote[$family->format6()])) {
@@ -1065,7 +1113,7 @@ class PhpInstaller
         return $last !== false ? $last->patch : null;
     }
 
-    public function higherInstalled(Version $version, Version ...$filters): bool
+    public function higherInstalled(Version $version, VersionFilter ...$filters): bool
     {
         foreach ($this->local as $versions) {
             foreach ($versions as $local) {
@@ -1092,21 +1140,21 @@ class PhpInstaller
             foreach ($minors as $minor) {
                 // no nts versions before 5.2 and no 64bit versions before 5.5
                 if ($major > 5 || ($major === 5 && $minor >= 5)) {
-                    $family = new Version($major, $minor, null, false, 64);
+                    $family = Version::newPhp($major, $minor, null, null, null,  false, '64');
                     $this->families[$family->format6()] = $family;
                 }
                 // no 64bit versions before 5.5
                 if ($major > 5 || ($major === 5 && $minor >= 5)) {
-                    $family = new Version($major, $minor, null, true, 64);
+                    $family = Version::newPhp($major, $minor, null, null, null, true, '64');
                     $this->families[$family->format6()] = $family;
                 }
                 // no nts versions before 5.2
                 if ($major > 5 || ($major === 5 && $minor >= 2)) {
-                    $family = new Version($major, $minor, null, false, 32);
+                    $family = Version::newPhp($major, $minor, null, null, null, false, '32');
                     $this->families[$family->format6()] = $family;
                 }
                 // always available
-                $family = new Version($major, $minor, null, true, 32);
+                $family = Version::newPhp($major, $minor, null, null, null, true, '32');
                 $this->families[$family->format6()] = $family;
             }
         }
@@ -1116,7 +1164,7 @@ class PhpInstaller
             if (!$directory->isDirectory() || !str_starts_with($directory->getName(), 'php')) {
                 continue;
             }
-            $versions[] = Version::parseDirectory($directory->getName());
+            $versions[] = self::parsePhpDirectory($directory->getName());
         }
 
         $this->selected = [];
@@ -1130,7 +1178,7 @@ class PhpInstaller
             }
             $alias = $fileName;
             $lines = Io::readLines($file->getPath());
-            $this->selected[$alias] = Version::parseDirectory($lines[1]);
+            $this->selected[$alias] = self::parsePhpDirectory($lines[1]);
         }
 
         /** @var Version $version */
@@ -1228,7 +1276,7 @@ class PhpInstaller
 
         // todo: snapshots?
 
-        $versions = Arr::sortComparable(Arr::remap($urls, static fn (int $k, string $url) => [$url => Version::parsePhpUrl($url)]));
+        $versions = Arr::sortComparable(Arr::remap($urls, static fn (int $k, string $url) => [$url => self::parsePhpUrl($url)]));
 
         /** @var Version $version */
         foreach ($versions as $version) {
@@ -1236,6 +1284,39 @@ class PhpInstaller
         }
 
         $this->downloadUrls = Arr::remap($versions, static fn (string $url, Version $version) => [$version->format6() => $url]);
+    }
+
+    private static function parsePhpDirectory(string $dir): Version
+    {
+        $m = Re::match($dir, '~(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)(?<type>(?:alpha|beta|RC)[0-9]+)?-?(?<threadSafe>ts)?-?(?<platform>32)?~i');
+        if ($m === null) {
+            throw new RuntimeException('Wrong directory');
+        }
+
+        return Version::newPhp(
+            intval($m['major']),
+            intval($m['minor']),
+            intval($m['patch']),
+            null,
+            $m['type'] ?? null,
+            isset($m['threadSafe']) && $m['threadSafe'] === 'ts',
+            isset($m['platform']) && $m['platform'] === '32' ? '32' : '64',
+        );
+    }
+
+    public static function parsePhpUrl(string $url): Version
+    {
+        $m = Re::match($url, '~php-(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)(?<type>(?:alpha|beta|RC)[0-9]+)?-?(?<threadSafe>nts)?.*(?<platform>x64|x86|Win32)~i');
+
+        return Version::newPhp(
+            intval($m['major']),
+            intval($m['minor']),
+            intval($m['patch']),
+            null,
+            null,
+            isset($m['threadSafe']) && $m['threadSafe'] !== 'nts',
+            isset($m['platform']) && ($m['platform'] === 'x86' || $m['platform'] === 'Win32' || $m['platform'] === 'win32') ? '32' : '64',
+        );
     }
 
     /**
@@ -1285,7 +1366,7 @@ class PhpInstaller
         foreach ($output as $line) {
             $match = Re::match($line, '~([a-zA-Z0-9_]+)\\|([0-9.]*)~');
             if ($match !== null) {
-                $extensions[strtolower($match[1])] = Version::parseExpression($match[2] ?: '*', $version);
+                $extensions[strtolower($match[1])] = Version::parseRelease($match[2] ?: PHP_VERSION, '~(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)~');
             }
         }
 
@@ -1359,6 +1440,9 @@ class PhpInstaller
         return isset($this->extensions[$extension]);
     }
 
+    /**
+     * @param array<string, mixed> $extensions
+     */
     private function loadRemoteExtensions(array $extensions): void
     {
         foreach ($extensions as $name => $x) {
@@ -1385,7 +1469,7 @@ class PhpInstaller
 
                     $releaseRe = "~https://windows.php.net/downloads/pecl/releases/{$name}/{$extVer}/php_{$name}-{$extVer}-(\d+\\.\d+(?:-nts|-ts)?(?:-v[cs]\d+)?-(?:x64|x86))\\.zip~";
                     foreach (Re::matchAll($html, $releaseRe, PREG_SET_ORDER) as [$releaseUrl, $ver]) {
-                        $version = Version::parsePhpUrl('php-' . $ver);
+                        $version = self::parsePhpUrl('php-' . $ver);
                         $versions[$version->formatFamily()][$releaseUrl] = $extVer;
                     }
                 }

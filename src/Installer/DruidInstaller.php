@@ -3,10 +3,7 @@
 namespace Herd\Installer;
 
 use Herd\Version;
-use function explode;
-use function str_pad;
-use function version_compare;
-use const STR_PAD_LEFT;
+use function intval;
 
 class DruidInstaller extends DockerInstaller
 {
@@ -15,16 +12,22 @@ class DruidInstaller extends DockerInstaller
     public string $fancyName = 'Druid';
     public string $dir = 'druid';
     public string $minVersion = '24.0.0';
+    public string $versionFormat = 'MM.m!.p';
+    public string $portPrefix = '';
 
     // metadata
-    public string $releaseNotesRe = '~match-nothing~';
+    public string $releaseNotesRe;
+    public string $gitTagsRe = '~refs/tags/druid-(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$~';
+    public string $gitRepoUrl = 'https://github.com/apache/druid.git';
 
     // docker
     public string $image = 'apache/druid';
     public string $containerPrefix = 'druid-';
     public string $volumePrefix = 'druid-data-';
     public string $volumeTarget = '/opt/druid/var';
+    /** @var array<int> */
     public array $ports = [8888];
+    /** @var array<string, string> */
     public array $envVars = [];
 
     public function translatePort(int $port, Version $version): int
@@ -38,25 +41,7 @@ class DruidInstaller extends DockerInstaller
             $minor = '';
         }
 
-        return (int) ($version->major . $minor . $version->patch);
-    }
-
-    public function loadReleaseNotesListsUrls(): void
-    {
-        $this->releaseNotesListsUrls = [];
-
-        if (exec('git ls-remote --tags https://github.com/apache/druid.git', $output, $resultCode) !== false && $resultCode === 0) {
-            foreach ($output as $row) {
-                // tags are like "refs/tags/druid-36.0.0"
-                if (preg_match('~refs/tags/druid-(\d+\.\d+\.\d+)$~', $row, $matches)) {
-                    [$major, $minor, $patch] = explode('.', $matches[1]);
-                    $version = new Version((int) $major, (int) $minor, (int) $patch, null, null, null, null, null, $this->fancyName);
-                    if (!isset($this->minVersion) || version_compare($this->versionKey($version), $this->minVersion) >= 0) {
-                        $this->remote[$this->familyKey($version)][$this->versionKey($version)] = $version;
-                    }
-                }
-            }
-        }
+        return intval($version->major . $minor . $version->patch);
     }
 
 }

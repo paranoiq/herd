@@ -4,7 +4,9 @@ namespace Herd\Installer;
 
 use Herd\Version;
 use function end;
+use function intval;
 use function str_pad;
+use function strval;
 use const STR_PAD_LEFT;
 
 class PostgreInstaller extends DockerInstaller
@@ -14,6 +16,8 @@ class PostgreInstaller extends DockerInstaller
     public string $fancyName = 'PostgreSQL';
     public string $dir = 'postgre';
     public string $minVersion = '10.0';
+    public string $versionFormat = 'MM.mm'; // old M.m.pp
+    public string $portPrefix;
 
     // metadata
     public string $releaseNotesRe = '~/docs/release/(?P<version>\d+\.\d+)~';
@@ -23,7 +27,9 @@ class PostgreInstaller extends DockerInstaller
     public string $containerPrefix = 'postgres-';
     public string $volumePrefix = 'postgres-data-';
     public string $volumeTarget = '/var/lib/postgresql/data';
+    /** @var array<int> */
     public array $ports = [5432];
+    /** @var array<string, string> */
     public array $envVars = ['POSTGRES_PASSWORD' => 'root']; // admin user is "postgre"
 
     public function translatePort(int $port, Version $version): int
@@ -32,9 +38,9 @@ class PostgreInstaller extends DockerInstaller
         // 10.23  -> 51023
 
         if ($version->major < 10) {
-            return '5' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+            return intval('5' . $version->major . $version->minor . str_pad(strval($version->patch), 2, '0', STR_PAD_LEFT));
         } else {
-            return '5' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT);
+            return intval('5' . $version->major . str_pad(strval($version->minor), 2, '0', STR_PAD_LEFT));
         }
     }
 

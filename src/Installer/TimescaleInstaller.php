@@ -2,9 +2,11 @@
 
 namespace Herd\Installer;
 
+use Dogma\Parse;
 use Herd\Version;
-use function explode;
+use function intval;
 use function str_pad;
+use function strval;
 use function version_compare;
 use const STR_PAD_LEFT;
 
@@ -15,6 +17,8 @@ class TimescaleInstaller extends DockerInstaller
     public string $fancyName = 'TimescaleDB';
     public string $dir = 'timescale';
     public string $minVersion = '2.0.0';
+    public string $versionFormat = 'M.mm.p-AANN';
+    public string $portPrefix;
 
     // metadata
     public string $releaseNotesRe = '~match-nothing~';
@@ -24,18 +28,20 @@ class TimescaleInstaller extends DockerInstaller
     public string $containerPrefix = 'timescale-';
     public string $volumePrefix = 'timescale-data-';
     public string $volumeTarget = '/var/lib/postgresql/data';
+    /** @var array<int> */
     public array $ports = [5432];
+    /** @var array<string, string> */
     public array $envVars = ['POSTGRES_PASSWORD' => 'root'];
-    public array $pgVersions = ['pg15', 'pg16', 'pg17', 'pg18'];
+    /** @var array<string, string> */
+    public array $pgVersions = ['pg15' => '1', 'pg16' => '2', 'pg17' => '3', 'pg18' => '4']; // (version => portPrefix)
 
     public function translatePort(int $port, Version $version): int
     {
         // 2.17.0-pg18 -> 42170
 
-        $prefixes = ['pg15' => '1', 'pg16' => '2', 'pg17' => '3', 'pg18' => '4'];
-        $prefix = $prefixes[$version->build];
+        $prefix = $this->pgVersions[$version->build];
 
-        return $prefix . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
+        return intval($prefix . $version->major . str_pad(strval($version->minor), 2, '0', STR_PAD_LEFT) . $version->patch);
     }
 
     public function loadReleaseNotesListsUrls(): void
@@ -46,9 +52,9 @@ class TimescaleInstaller extends DockerInstaller
             foreach ($output as $row) {
                 // take only GA release versions (e.g. 2.17.0, no rc/alpha/beta)
                 if (preg_match('~refs/tags/(\d+\.\d+\.\d+)$~', $row, $matches)) {
-                    [$major, $minor, $patch] = explode('.', $matches[1]);
-                    foreach ($this->pgVersions as $pgVersion) {
-                        $version = new Version((int) $major, (int) $minor, (int) $patch, null, null, $pgVersion, null, null, $this->fancyName);
+                    [$major, $minor, $patch] = Parse::ints($matches[1], '.');
+                    foreach ($this->pgVersions as $pgVersion => $portPrefix) {
+                        $version = Version::new3($major, $minor, $patch, $pgVersion, null, null, $this->fancyName);
                         if (!isset($this->minVersion) || version_compare($this->versionKey($version), $this->minVersion) >= 0) {
                             $this->remote[$this->familyKey($version)][$this->versionKey($version)] = $version;
                         }

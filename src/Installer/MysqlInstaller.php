@@ -3,12 +3,15 @@
 namespace Herd\Installer;
 
 use Dogma\Io\FileInfo;
+use Dogma\Parse;
 use Dogma\Re;
 use Dogma\Time\Date;
 use Dogma\Time\DateTime;
 use Herd\Version;
+use function intval;
 use function str_pad;
 use function str_replace;
+use function strval;
 use function version_compare;
 use const PREG_SET_ORDER;
 use const STR_PAD_LEFT;
@@ -20,6 +23,8 @@ class MysqlInstaller extends DockerInstaller
     public string $fancyName = 'MySQL';
     public string $dir = 'mysql';
     public string $minVersion = '5.5.0';
+    public string $versionFormat = 'M.m.pp';
+    public string $portPrefix = '3';
 
     // metadata
     public string $releaseNotesRe = '~Changes in MySQL (?P<version>\d+.\d+.\d+) \((?P<date>\d+-\d+-\d+), (?P<type>[^)]+)\)~i';
@@ -29,7 +34,9 @@ class MysqlInstaller extends DockerInstaller
     public string $containerPrefix = 'mysql-';
     public string $volumePrefix = 'mysql-data-';
     public string $volumeTarget = '/var/lib/mysql';
+    /** @var array<int> */
     public array $ports = [3306];
+    /** @var array<string, string> */
     public array $envVars = ['MYSQL_ROOT_PASSWORD' => 'root'];
 
     public function translatePort(int $port, Version $version): int
@@ -37,7 +44,7 @@ class MysqlInstaller extends DockerInstaller
         // 5.7.44 -> 35744
         // 8.0.11 -> 38011
 
-        return '3' . $version->major . $version->minor . str_pad($version->patch, 2, '0', STR_PAD_LEFT);
+        return intval('3' . $version->major . $version->minor . str_pad(strval($version->patch), 2, '0', STR_PAD_LEFT));
     }
 
     public function loadReleaseNotesListsUrls(): void
@@ -70,8 +77,8 @@ class MysqlInstaller extends DockerInstaller
 
         // inject versions that are no longer in the web release notes
         foreach ($this->releaseDates as $ver => $date) {
-            [$major, $minor, $patch] = explode('.', $ver);
-            $version = new Version((int) $major, (int) $minor, (int) $patch, null, null, null, new Date($date), null, $this->fancyName);
+            [$major, $minor, $patch] = Parse::ints($ver, '.');
+            $version = Version::new3($major, $minor, $patch, null, null, new Date($date), $this->fancyName);
             if (!isset($this->minVersion) || version_compare($this->versionKey($version), $this->minVersion) >= 0) {
                 $this->remote[$this->familyKey($version)][$this->versionKey($version)] = $version;
             }

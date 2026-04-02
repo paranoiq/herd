@@ -7,6 +7,7 @@ use Dogma\Http\HttpRequest;
 use Dogma\Io\FilesystemException;
 use Dogma\Io\Io;
 use Dogma\System\Os;
+use RuntimeException;
 use StreamContext;
 use Tracy\Debugger;
 use ZipArchive;
@@ -77,7 +78,7 @@ class HttpHelper
 
     public function setupUserAgent(HttpRequest $request): void
     {
-        $version_info = curl_version();
+        $version_info = curl_version() ?: throw new RuntimeException();
 
         $request->setOption(CURLOPT_USERAGENT, "curl/{$version_info['version']}");
     }

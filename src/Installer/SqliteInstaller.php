@@ -5,7 +5,8 @@ namespace Herd\Installer;
 class SqliteInstaller
 {
 
-    public $sqlite_versions = [
+    /** @var array<string, string> */
+    public array $sqlite_versions = [
         '3.48.0'  => '2026-01-22',
 
         '3.47.2'  => '2025-12-18',

@@ -6,7 +6,9 @@ use Dogma\Re;
 use Dogma\Time\Date;
 use Herd\Version;
 use function end;
+use function intval;
 use function str_pad;
+use function strval;
 use const PREG_SET_ORDER;
 use const STR_PAD_LEFT;
 
@@ -17,6 +19,8 @@ class TrinoInstaller extends DockerInstaller
     public string $fancyName = 'Trino';
     public string $dir = 'trino';
     public string $minVersion = '0.300';
+    public string $versionFormat = 'M!.mmm.p';
+    public string $portPrefix = '';
 
     // metadata
     public string $releaseNotesRe = '~release-(?P<version>\d+(?:\.\d+(?:\.\d+)?)?)\.html~i';
@@ -26,25 +30,37 @@ class TrinoInstaller extends DockerInstaller
     public string $containerPrefix = 'trino-';
     public string $volumePrefix = 'trino-data-';
     public string $volumeTarget = '/opt/presto-server/etc/catalog';
+    /** @var array<int> */
     public array $ports = [8080];
+    /** @var array<string, string> */
     public array $envVars = [];
 
     public function translatePort(int $port, Version $version): int
     {
         // 479 -> 4790
 
-        return str_pad($version->minor, 3, '0', STR_PAD_LEFT) . ($version->patch ?: 0);
+        return intval(str_pad(strval($version->minor), 3, '0', STR_PAD_LEFT) . ($version->patch ?: 0));
+    }
+
+    public function loadReleaseNotesListsUrls(): void
+    {
+        $this->releaseNotesListsUrls = [
+            "all" => "https://trino.io/docs/current/release.html",
+        ];
     }
 
     /**
      * @override
      * @return array<string, Version>
      */
-    public function parseVersionsFromReleaseNotesList(string $html): array
+    public function getAvailableVersions(string $html): array
     {
         $versions = [];
         foreach (Re::matchAll($html, $this->releaseNotesRe, PREG_SET_ORDER) as $match) {
             $version = Version::parseRelease($match[0], $this->releaseNotesRe, $this->fancyName);
+            if ($version === null) {
+                continue;
+            }
             if ($version->major > 100) {
                 $version->minor = $version->major;
                 $version->major = 0;
@@ -61,7 +77,7 @@ class TrinoInstaller extends DockerInstaller
     /** @override */
     public function familyKey(Version $version): string
     {
-        return $version->major;
+        return strval($version->major);
     }
 
     /** @override */
@@ -107,13 +123,6 @@ class TrinoInstaller extends DockerInstaller
     public function createLatest(Version $version, int|string $last): Version
     {
         return $version->setMinor($last);
-    }
-
-    public function loadReleaseNotesListsUrls(): void
-    {
-        $this->releaseNotesListsUrls = [
-            "all" => "https://trino.io/docs/current/release.html",
-        ];
     }
 
 }

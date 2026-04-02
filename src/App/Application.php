@@ -1,12 +1,6 @@
 <?php
 
-namespace Herd;
-
-use Herd\App\Action;
-use Herd\App\Choices;
-use Herd\App\Argument;
-use Herd\App\Option;
-use Herd\App\RouteList;
+namespace Herd\App;
 
 #[RouteList(RouteList::CLI)]
 #[Argument('expr', [self::class, 'expressionHelp'])]

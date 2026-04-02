@@ -3,8 +3,9 @@
 namespace Herd\Installer;
 
 use Herd\Version;
+use function intval;
 use function str_pad;
-use function version_compare;
+use function strval;
 use const STR_PAD_LEFT;
 
 class DragonflyInstaller extends DockerInstaller
@@ -14,9 +15,13 @@ class DragonflyInstaller extends DockerInstaller
     public string $fancyName = 'Dragonfly';
     public string $dir = 'dragonfly';
     public string $minVersion = '0.2.0';
+    public string $versionFormat = 'M?.mm.pp';
+    public string $portPrefix = '4';
 
     // metadata
-    public string $releaseNotesRe = '~match-nothing~';
+    public string $releaseNotesRe;
+    public string $gitTagsRe = '~refs/tags/v(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$~';
+    public string $gitRepoUrl = 'https://github.com/dragonflydb/dragonfly.git';
 
     // docker
     public string $image = 'docker.dragonflydb.io/dragonflydb/dragonfly';
@@ -24,37 +29,27 @@ class DragonflyInstaller extends DockerInstaller
     public string $volumePrefix = 'dragonfly-data-';
     public string $volumeTarget = '/data';
     public string $runCommand = '--dir /data';
+    /** @var array<int> */
     public array $ports = [6379];
+    /** @var array<string, string> */
     public array $envVars;
 
     public function translatePort(int $port, Version $version): int
     {
-        // 1.24.8 -> 41348
+        // 1.24.8  -> 41348
+        // 1.28.30 -> 42830 shortened
 
-        return '4' . $version->major . str_pad($version->minor, 2, '0', STR_PAD_LEFT) . $version->patch;
+        $major = $version->major;
+        if ($version->patch > 9) {
+            $major = '';
+        }
+
+        return intval('4' . $major . str_pad(strval($version->minor), 2, '0', STR_PAD_LEFT) . $version->patch);
     }
 
     public function dockerVersionKey(Version $version): string
     {
         return 'v' . $version->format3();
-    }
-
-    public function loadReleaseNotesListsUrls(): void
-    {
-        $this->releaseNotesListsUrls = [];
-
-        if (exec('git ls-remote --tags https://github.com/dragonflydb/dragonfly.git', $output, $resultCode) !== false && $resultCode === 0) {
-            foreach ($output as $row) {
-                // take only GA release versions
-                if (preg_match('~refs/tags/v(\d+\.\d+\.\d+)$~', $row, $matches)) {
-                    [$major, $minor, $patch] = explode('.', $matches[1]);
-                    $version = new Version((int)$major, (int)$minor, (int)$patch, null, null, null, null, null, $this->fancyName);
-                    if (!isset($this->minVersion) || version_compare($this->versionKey($version), $this->minVersion) >= 0) {
-                        $this->remote[$this->familyKey($version)][$this->versionKey($version)] = $version;
-                    }
-                }
-            }
-        }
     }
 
 }

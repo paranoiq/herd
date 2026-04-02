@@ -26,8 +26,12 @@ use Herd\Installer\RedisInstaller;
 use Herd\Installer\TimescaleInstaller;
 use Herd\Installer\TrinoInstaller;
 use Herd\Installer\ValkeyInstaller;
+use Dogma\System\Port;
 
 $baseDir = 'C:/tools/php';
+
+/** @var array<int, string> $portNames */
+$portNames = array_flip(Port::getAllowedValues());
 $console = new Console();
 
 /** @var DockerInstaller[] $installers */
@@ -66,11 +70,12 @@ foreach ($installers as $installer) {
 
     foreach ($installer->remote as $versions) {
         foreach ($versions as $versionKey => $version) {
-            foreach ($installer->ports as $port) {
+            foreach ($installer->ports as $portKey => $port) {
+                $displayName = is_string($portKey) ? "{$installer->fancyName} ({$portKey})" : $installer->fancyName;
                 $translated = $installer->translatePort($port, $version);
-                $portMap[$translated][] = [$installer->fancyName, $versionKey];
+                $portMap[$translated][] = [$displayName, $versionKey];
                 if ($translated > 65535) {
-                    $invalidPorts[] = [$installer->fancyName, $versionKey, $translated];
+                    $invalidPorts[] = [$displayName, $versionKey, $translated];
                 }
             }
         }
@@ -85,19 +90,19 @@ foreach ($installers as $installer) {
 $stats = [];
 
 foreach ($installers as $installer) {
-    $name = $installer->fancyName;
-    $stats[$name] = ['total' => 0, 'colliding' => 0, 'minVersion' => '', 'maxVersion' => '', 'minPort' => PHP_INT_MAX, 'maxPort' => 0];
+    foreach ($installer->ports as $portKey => $port) {
+        $name = is_string($portKey) ? "{$installer->fancyName} ({$portKey})" : $installer->fancyName;
+        $stats[$name] = ['total' => 0, 'colliding' => 0, 'minVersion' => '', 'maxVersion' => '', 'minPort' => PHP_INT_MAX, 'maxPort' => 0];
 
-    foreach ($installer->remote as $versions) {
-        foreach ($versions as $versionKey => $version) {
-            $stats[$name]['total']++;
-            if ($stats[$name]['minVersion'] === '' || version_compare($versionKey, $stats[$name]['minVersion']) < 0) {
-                $stats[$name]['minVersion'] = $versionKey;
-            }
-            if (version_compare($versionKey, $stats[$name]['maxVersion']) > 0) {
-                $stats[$name]['maxVersion'] = $versionKey;
-            }
-            foreach ($installer->ports as $port) {
+        foreach ($installer->remote as $versions) {
+            foreach ($versions as $versionKey => $version) {
+                $stats[$name]['total']++;
+                if ($stats[$name]['minVersion'] === '' || version_compare($versionKey, $stats[$name]['minVersion']) < 0) {
+                    $stats[$name]['minVersion'] = $versionKey;
+                }
+                if (version_compare($versionKey, $stats[$name]['maxVersion']) > 0) {
+                    $stats[$name]['maxVersion'] = $versionKey;
+                }
                 $translated = $installer->translatePort($port, $version);
                 if ($translated < $stats[$name]['minPort']) {
                     $stats[$name]['minPort'] = $translated;
@@ -107,7 +112,6 @@ foreach ($installers as $installer) {
                 }
                 if (count($portMap[$translated]) > 1) {
                     $stats[$name]['colliding']++;
-                    break;
                 }
             }
         }
@@ -219,7 +223,8 @@ for ($row = 0; $row < $rowCount; $row++) {
         $entries = $portMap[$port] ?? [];
         $multi = count($entries) > 1;
         echo "<td" . ($multi ? " class='m'" : "") . ">";
-        echo "<div class='pn'>{$port}</div>";
+        $portLabel = isset($portNames[$port]) ? "{$port} " . $portNames[$port] : (string) $port;
+        echo "<div class='pn'>{$portLabel}</div>";
         foreach ($entries as [$name, $ver]) {
             echo "<div class='entry'>" . htmlspecialchars($name) . " " . htmlspecialchars($ver) . "</div>";
         }
